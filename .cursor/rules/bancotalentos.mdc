@@ -1,0 +1,16 @@
+---
+description: Banco de Talentos Docentes — protocolo de implementação
+globs:
+  - "**/*"
+alwaysApply: true
+---
+
+Antes de implementar qualquer feature neste repositório:
+
+1. Leia `docs/plano/README.md` e o handoff mais recente em `docs/plano/handoffs/`
+2. Siga o modelo de dados em `docs/plano/02-modelo-dados.md`
+3. Use tokens visuais de `docs/plano/03-design-system.md` (Liceu Jardim, não SaaS genérico)
+4. Auth: Google Workspace da escola + allowlist `staff_users`; sem cadastro público
+5. Regras de negócio críticas: pessoa ≠ candidatura; média nunca substitui avaliações individuais; dimensão ausente ≠ zero; cobertura sempre visível
+6. Nunca commitar `dados-brutos/*.xlsx` nem `.env.local`
+7. Ao fechar uma etapa, escreva handoff em `docs/plano/handoffs/`

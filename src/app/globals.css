@@ -1,0 +1,153 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-source-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-heading: var(--font-archivo), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: ui-monospace, monospace;
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+:root {
+  --liceu-navy: #0b3053;
+  --liceu-navy-hover: #16456f;
+  --liceu-gold: #e3c39d;
+  --liceu-gold-text: #b98a4e;
+  --liceu-bg: #f1efea;
+  --liceu-card: #ffffff;
+  --liceu-border: #e2ddd4;
+  --liceu-text: #172026;
+  --liceu-muted: #6e7378;
+  --liceu-subtle: #9aa0a5;
+
+  --background: var(--liceu-bg);
+  --foreground: var(--liceu-text);
+  --card: var(--liceu-card);
+  --card-foreground: var(--liceu-text);
+  --popover: var(--liceu-card);
+  --popover-foreground: var(--liceu-text);
+  --primary: var(--liceu-navy);
+  --primary-foreground: #ffffff;
+  --secondary: #e8e4dc;
+  --secondary-foreground: var(--liceu-navy);
+  --muted: #e8e4dc;
+  --muted-foreground: var(--liceu-muted);
+  --accent: var(--liceu-gold);
+  --accent-foreground: var(--liceu-navy);
+  --destructive: #c0392b;
+  --border: var(--liceu-border);
+  --input: var(--liceu-border);
+  --ring: var(--liceu-navy);
+  --radius: 0.1875rem;
+  --chart-1: var(--liceu-navy);
+  --chart-2: var(--liceu-gold);
+  --chart-3: var(--liceu-gold-text);
+  --chart-4: var(--liceu-muted);
+  --chart-5: var(--liceu-subtle);
+  --sidebar: var(--liceu-navy);
+  --sidebar-foreground: var(--liceu-gold);
+  --sidebar-primary: var(--liceu-gold);
+  --sidebar-primary-foreground: var(--liceu-navy);
+  --sidebar-accent: var(--liceu-navy-hover);
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: var(--liceu-navy-hover);
+  --sidebar-ring: var(--liceu-gold);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
+  }
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: var(--font-heading);
+  }
+}
+
+@layer components {
+  .liceu-card {
+    @apply rounded-[3px] border border-[var(--liceu-border)] bg-[var(--liceu-card)];
+  }
+
+  .liceu-kpi-strip {
+    @apply grid grid-cols-2 gap-px overflow-hidden rounded-[3px] border border-[var(--liceu-border)] bg-[var(--liceu-border)] sm:grid-cols-4;
+  }
+
+  .liceu-kpi {
+    @apply flex flex-col gap-1 bg-[var(--liceu-card)] px-4 py-3;
+  }
+
+  .liceu-kpi-label {
+    @apply text-xs font-medium uppercase tracking-wide text-[var(--liceu-gold-text)];
+  }
+
+  .liceu-kpi-value {
+    @apply font-heading text-2xl font-bold text-[var(--liceu-navy)];
+  }
+
+  .liceu-table thead {
+    @apply bg-[var(--liceu-navy)] text-[var(--liceu-gold)];
+  }
+
+  .liceu-table th {
+    @apply px-3 py-2 text-left text-xs font-medium uppercase tracking-wide;
+  }
+
+  .liceu-table td {
+    @apply border-b border-[var(--liceu-border)] px-3 py-2 text-sm;
+  }
+
+  .liceu-table tbody tr:hover {
+    @apply bg-[var(--liceu-bg)];
+  }
+}
