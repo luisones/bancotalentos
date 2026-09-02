@@ -13,7 +13,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -24,7 +23,6 @@ import {
 import {
   addApplicationTag,
   addContact,
-  addNote,
   updateApplicationStatus,
   updateTalentClassification,
 } from "@/lib/actions/crm";
@@ -168,99 +166,6 @@ export function ContactDialog({
             }
           >
             {isPending ? "Registrando…" : "Registrar contato"}
-          </Button>
-        </div>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-/** Escrever observação — o gesto de "guardei uma impressão". */
-export function NoteDialog({
-  candidateId,
-  applicationId,
-  trigger,
-}: {
-  candidateId: string;
-  applicationId?: string;
-  trigger: React.ReactNode;
-}) {
-  const [open, setOpen] = useState(false);
-  const [body, setBody] = useState("");
-  const [highlight, setHighlight] = useState(false);
-  const { error, isPending, run } = useAction();
-
-  return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>{trigger}</DialogTrigger>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Escrever observação</DialogTitle>
-          <DialogDescription>
-            Texto livre, do tamanho que precisar. Fica registrado com seu nome e
-            a data, dentro da seção Observações internas.
-          </DialogDescription>
-        </DialogHeader>
-
-        {/* A confusão que isto resolve: o checkbox antigo dizia "destacar no
-            topo" e era lido como "deixar sempre visível", que é o trabalho da
-            nota rápida. Agora cada um diz onde age. */}
-        <div className="border-l-[3px] border-l-gold-text bg-gold-bg px-3 py-2.5">
-          <p className="text-note leading-relaxed text-ink-2">
-            Quer uma <strong className="font-semibold">linha curta sempre
-            visível</strong>, inclusive na lista do ranking? Isso é a{" "}
-            <strong className="font-semibold">nota rápida</strong>, no topo da
-            ficha, logo abaixo do nome — não uma observação.
-          </p>
-        </div>
-
-        <Textarea
-          rows={6}
-          value={body}
-          onChange={(e) => setBody(e.target.value)}
-          placeholder="O que você observou"
-          aria-label="Observação"
-        />
-        <label className="flex cursor-pointer items-start gap-2.5">
-          <Checkbox
-            className="mt-0.5"
-            checked={highlight}
-            onCheckedChange={(v) => setHighlight(Boolean(v))}
-          />
-          <span>
-            <span className="text-dense block">
-              Fixar no topo das Observações internas
-            </span>
-            <span className="text-meta block text-subtle">
-              Só reordena dentro daquela seção. Não aparece no ranking.
-            </span>
-          </span>
-        </label>
-        <ErrorLine code={error} />
-        <div className="flex justify-end gap-2">
-          <Button variant="ghost" onClick={() => setOpen(false)}>
-            Cancelar
-          </Button>
-          <Button
-            disabled={isPending || body.trim().length === 0}
-            onClick={() =>
-              run(
-                () =>
-                  addNote({
-                    candidateId,
-                    applicationId,
-                    body: body.trim(),
-                    isHighlighted: highlight,
-                  }),
-                () => {
-                  setOpen(false);
-                  setBody("");
-                  setHighlight(false);
-                },
-              )
-            }
-          >
-            {isPending ? "Salvando…" : "Salvar observação"}
           </Button>
         </div>
       </DialogContent>

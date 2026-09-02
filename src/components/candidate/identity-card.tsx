@@ -4,7 +4,6 @@ import { MicroHeader, Panel } from "@/components/liceu/surface";
 import { initialsOf } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { toneFg, type Tone } from "@/lib/tone";
-import { QuickNoteEditor } from "./quick-note-editor";
 
 /**
  * Card de identidade.
@@ -17,8 +16,6 @@ export function IdentityCard({
   eyebrow,
   name,
   quickNote,
-  candidateId,
-  canWrite,
   quickNoteAuthorship,
   chips,
   selective,
@@ -31,8 +28,6 @@ export function IdentityCard({
   eyebrow: string;
   name: string;
   quickNote: string | null;
-  candidateId: string;
-  canWrite: boolean;
   quickNoteAuthorship?: string | null;
   chips: string[];
   selective: { label: string; tone: Tone; action?: React.ReactNode };
@@ -60,14 +55,20 @@ export function IdentityCard({
             {name}
           </h1>
 
-          <div className="mb-3">
-            <QuickNoteEditor
-              candidateId={candidateId}
-              note={quickNote}
-              canWrite={canWrite}
-              authorship={quickNoteAuthorship}
-            />
-          </div>
+          {/* Só EXIBIÇÃO. Toda escrita acontece no diálogo único do topo,
+              para não haver dois caminhos que parecem fazer o mesmo. */}
+          {quickNote && (
+            <div className="mb-3 flex flex-wrap items-baseline gap-x-3 gap-y-0.5">
+              <p className="text-dense border-l-2 border-l-gold-text pl-2.5 text-ink-3">
+                {quickNote}
+              </p>
+              {quickNoteAuthorship && (
+                <span className="text-meta text-subtle">
+                  {quickNoteAuthorship}
+                </span>
+              )}
+            </div>
+          )}
 
           {chips.length > 0 && (
             <div className="flex flex-wrap gap-2">

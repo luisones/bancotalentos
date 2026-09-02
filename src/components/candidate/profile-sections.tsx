@@ -8,7 +8,8 @@ import { EmptyState, RestrictedState } from "@/components/liceu/states";
 import { MicroHeader } from "@/components/liceu/surface";
 import { Button } from "@/components/ui/button";
 import type { ProfileViewModel } from "@/lib/types/candidate-profile";
-import { ContactDialog, NoteDialog, StatusDialog, TagAdder } from "./crm-actions";
+import { ContactDialog, StatusDialog, TagAdder } from "./crm-actions";
+import { WriteDialog } from "./write-dialog";
 import { DimensionEvaluation } from "./dimension-evaluation";
 
 /*
@@ -633,9 +634,11 @@ export function ObservacoesSection({ vm }: { vm: ProfileViewModel }) {
       summary={n.summary}
     >
       {viewer.canWrite && (
-        <NoteDialog
+        <WriteDialog
           candidateId={candidateId}
           applicationId={focused?.applicationId}
+          quickNote={vm.identity.quickNote}
+          defaultTab="geral"
           trigger={
             <Button variant="outline" size="sm" className="mb-4">
               Escrever observação

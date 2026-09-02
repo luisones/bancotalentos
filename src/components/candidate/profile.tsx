@@ -9,7 +9,12 @@ import { PageHeader } from "@/components/layout/page-header";
 import type { ProfileViewModel } from "@/lib/types/candidate-profile";
 import { ApplicationSwitcher } from "./application-switcher";
 import { AttentionBand } from "./attention-band";
-import { ContactDialog, NoteDialog, StatusDialog, ClassificationDialog } from "./crm-actions";
+import {
+  ClassificationDialog,
+  ContactDialog,
+  StatusDialog,
+} from "./crm-actions";
+import { WriteDialog } from "./write-dialog";
 import { IdentityCard } from "./identity-card";
 import {
   AuditoriaSection,
@@ -104,8 +109,6 @@ export function CandidateProfile({
         name={id.name}
         quickNote={id.quickNote}
         quickNoteAuthorship={id.quickNoteAuthorship}
-        candidateId={candidateId}
-        canWrite={viewer.canWrite}
         chips={id.chips}
         selective={{
           label: id.selective.label,
@@ -217,9 +220,10 @@ export function CandidateProfile({
                     </Button>
                   }
                 />
-                <NoteDialog
+                <WriteDialog
                   candidateId={candidateId}
                   applicationId={focused?.applicationId}
+                  quickNote={id.quickNote}
                   trigger={
                     <Button size="stack" variant="outline">
                       Escrever observação
