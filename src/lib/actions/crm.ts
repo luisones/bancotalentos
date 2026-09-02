@@ -4,6 +4,8 @@ import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { canWrite, requireStaff } from "@/lib/auth/staff";
 import { db } from "@/lib/db";
+import { QUICK_NOTE_MAX } from "@/lib/candidate/quick-note";
+import { err, ok, type ActionResult } from "./result";
 import {
   applicationTags,
   applications,
@@ -27,9 +29,9 @@ export async function addContact(input: {
     | "indisponivel"
     | "outro";
   note?: string;
-}) {
+}): Promise<ActionResult> {
   const staff = await requireStaff();
-  if (!canWrite(staff)) throw new Error("Sem permissão de escrita");
+  if (!canWrite(staff)) return err("sem_permissao");
 
   await db.insert(contacts).values({
     candidateId: input.candidateId,
@@ -41,7 +43,7 @@ export async function addContact(input: {
   });
 
   revalidatePath(`/candidatos/${input.candidateId}`);
-  return { success: true };
+  return ok();
 }
 
 export async function addNote(input: {
@@ -49,9 +51,9 @@ export async function addNote(input: {
   applicationId?: string;
   body: string;
   isHighlighted?: boolean;
-}) {
+}): Promise<ActionResult> {
   const staff = await requireStaff();
-  if (!canWrite(staff)) throw new Error("Sem permissão de escrita");
+  if (!canWrite(staff)) return err("sem_permissao");
 
   await db.insert(notes).values({
     candidateId: input.candidateId,
@@ -62,7 +64,7 @@ export async function addNote(input: {
   });
 
   revalidatePath(`/candidatos/${input.candidateId}`);
-  return { success: true };
+  return ok();
 }
 
 export async function updateApplicationStatus(input: {
@@ -70,15 +72,15 @@ export async function updateApplicationStatus(input: {
   candidateId: string;
   operationalStatus?: string;
   selectiveStatus?: string;
-}) {
+}): Promise<ActionResult> {
   const staff = await requireStaff();
-  if (!canWrite(staff)) throw new Error("Sem permissão de escrita");
+  if (!canWrite(staff)) return err("sem_permissao");
 
   const updates: Record<string, string> = {};
   if (input.operationalStatus) updates.operationalStatus = input.operationalStatus;
   if (input.selectiveStatus) updates.selectiveStatus = input.selectiveStatus;
 
-  if (Object.keys(updates).length === 0) return { success: true };
+  if (Object.keys(updates).length === 0) return ok();
 
   await db
     .update(applications)
@@ -95,16 +97,16 @@ export async function updateApplicationStatus(input: {
 
   revalidatePath(`/candidatos/${input.candidateId}`);
   revalidatePath("/ranking");
-  return { success: true };
+  return ok();
 }
 
 export async function addApplicationTag(input: {
   applicationId: string;
   candidateId: string;
   tagName: string;
-}) {
+}): Promise<ActionResult> {
   const staff = await requireStaff();
-  if (!canWrite(staff)) throw new Error("Sem permissão de escrita");
+  if (!canWrite(staff)) return err("sem_permissao");
 
   const slug = input.tagName
     .toLowerCase()
@@ -127,7 +129,7 @@ export async function addApplicationTag(input: {
   });
 
   revalidatePath(`/candidatos/${input.candidateId}`);
-  return { success: true };
+  return ok();
 }
 
 export async function updateTalentClassification(input: {
@@ -138,9 +140,9 @@ export async function updateTalentClassification(input: {
     | "interessante"
     | "prioritario"
     | "forte_candidato";
-}) {
+}): Promise<ActionResult> {
   const staff = await requireStaff();
-  if (!canWrite(staff)) throw new Error("Sem permissão de escrita");
+  if (!canWrite(staff)) return err("sem_permissao");
 
   await db
     .update(candidates)
@@ -160,5 +162,63 @@ export async function updateTalentClassification(input: {
 
   revalidatePath(`/candidatos/${input.candidateId}`);
   revalidatePath("/ranking");
-  return { success: true };
+  return ok();
+}
+
+/**
+ * Nota rápida do candidato: uma linha, compartilhada, sempre visível.
+ *
+ * É o rótulo, não o registro — o histórico autorado fica em `notes`. A autoria
+ * e a data saem da trilha de auditoria (`quick_note_updated`), então o campo
+ * não precisa de colunas próprias para dizer quem mexeu nele e quando.
+ */
+export async function updateQuickNote(input: {
+  candidateId: string;
+  note: string;
+  /** Valor carregado pelo cliente, para detectar escrita concorrente. */
+  expected: string | null;
+}): Promise<ActionResult<{ note: string | null }>> {
+  const staff = await requireStaff();
+  if (!canWrite(staff)) return err("sem_permissao");
+
+  const next = input.note.trim().replace(/\s+/g, " ");
+  if (next.length > QUICK_NOTE_MAX) {
+    return err("nota_rapida_muito_longa", "note");
+  }
+
+  const [current] = await db
+    .select({ highlightedNote: candidates.highlightedNote })
+    .from(candidates)
+    .where(eq(candidates.id, input.candidateId))
+    .limit(1);
+
+  if (!current) return err("candidatura_invalida");
+
+  const before = current.highlightedNote;
+  // Campo compartilhado e sobrescrevível: sem baseline, duas pessoas editando
+  // ao mesmo tempo se atropelam em silêncio.
+  if ((before ?? "") !== (input.expected ?? "")) {
+    return err("conflito_de_versao", "note");
+  }
+
+  const value = next.length === 0 ? null : next;
+  if (value === before) return ok({ note: before });
+
+  await db
+    .update(candidates)
+    .set({ highlightedNote: value, updatedAt: new Date() })
+    .where(eq(candidates.id, input.candidateId));
+
+  await db.insert(auditEvents).values({
+    staffId: staff.id,
+    action: "quick_note_updated",
+    entityType: "candidate",
+    entityId: input.candidateId,
+    metadata: { de: before, para: value },
+  });
+
+  revalidatePath(`/candidatos/${input.candidateId}`);
+  revalidatePath("/ranking");
+  revalidatePath("/(app)", "page");
+  return ok({ note: value });
 }

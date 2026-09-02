@@ -5,6 +5,7 @@ import { neon } from "@neondatabase/serverless";
 import { drizzle } from "drizzle-orm/neon-http";
 import { eq } from "drizzle-orm";
 import * as schema from "../src/lib/db/schema";
+import { QUESTION_PROMPTS } from "./ingest/types";
 
 const sql = neon(process.env.DATABASE_URL!);
 const db = drizzle(sql, { schema });
@@ -19,6 +20,12 @@ const DISCIPLINES = [
   "Filosofia / Sociologia",
   "Física",
   "Português (Literatura)",
+  "Polivalente (Anos Iniciais)",
+  "Polivalente (Educação Infantil)",
+  "Educação Física",
+  "Inglês",
+  "Arte",
+  "Espanhol",
 ];
 
 const LESSON_CRITERIA = [
@@ -43,7 +50,7 @@ const DIMENSIONS: {
   name: string;
   sort: number;
 }[] = [
-  { code: "prova_conteudo", name: "Prova objetiva", sort: 1 },
+  { code: "prova_conteudo", name: "Prova de conteúdo", sort: 1 },
   { code: "didatica_objetiva", name: "Didática objetiva", sort: 2 },
   { code: "didatica_humana", name: "Didática humana", sort: 3 },
   { code: "curriculo", name: "Currículo", sort: 4 },
@@ -53,6 +60,19 @@ const DIMENSIONS: {
   { code: "socioemocional", name: "Socioemocional", sort: 8 },
 ];
 
+const CAMPAIGNS = [
+  {
+    name: "2025 — EFAF-EM",
+    slug: "2025-efaf-em",
+    description: "Processo seletivo docente EFAF-EM 2025",
+  },
+  {
+    name: "2026 — SCS",
+    slug: "2026-scs",
+    description: "Processo seletivo docente SCS 2026-08",
+  },
+];
+
 function slugify(text: string) {
   return text
     .toLowerCase()
@@ -60,6 +80,34 @@ function slugify(text: string) {
     .replace(/[\u0300-\u036f]/g, "")
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/(^-|-$)/g, "");
+}
+
+async function ensureInstruments(campaignId: string) {
+  for (const [code, promptText] of Object.entries(QUESTION_PROMPTS)) {
+    const rows = await db
+      .select()
+      .from(schema.instruments)
+      .where(eq(schema.instruments.campaignId, campaignId));
+    const found = rows.find((r) => r.code === code);
+    if (found) {
+      await db
+        .update(schema.instruments)
+        .set({
+          promptText,
+          needsSourceText: false,
+        })
+        .where(eq(schema.instruments.id, found.id));
+    } else {
+      await db.insert(schema.instruments).values({
+        campaignId,
+        code,
+        type: "subjective_question",
+        promptText,
+        scaleMax: "30",
+        needsSourceText: false,
+      });
+    }
+  }
 }
 
 async function main() {
@@ -85,6 +133,26 @@ async function main() {
     })
     .onConflictDoNothing();
 
+  await db
+    .insert(schema.staffUsers)
+    .values({
+      email: "rebeca.fazzani@liceujardim.com.br",
+      name: "Rebeca Fazzani",
+      role: "admin",
+      active: true,
+    })
+    .onConflictDoNothing();
+
+  await db
+    .insert(schema.staffUsers)
+    .values({
+      email: "ingest@internal",
+      name: "Importação",
+      role: "consulta",
+      active: true,
+    })
+    .onConflictDoNothing();
+
   for (const name of DISCIPLINES) {
     await db
       .insert(schema.disciplines)
@@ -102,25 +170,24 @@ async function main() {
     .values({ name: "EMEFAF", slug: "emefaf" })
     .onConflictDoNothing();
 
-  const [campaign] = await db
-    .insert(schema.campaigns)
-    .values({
-      name: "2025 — EFAF-EM",
-      slug: "2025-efaf-em",
-      description: "Processo seletivo docente EFAF-EM 2025",
-      status: "ativa",
-    })
-    .onConflictDoNothing()
-    .returning();
+  const campaignIds: Record<string, string> = {};
+  for (const c of CAMPAIGNS) {
+    const [inserted] = await db
+      .insert(schema.campaigns)
+      .values({ ...c, status: "ativa" })
+      .onConflictDoNothing()
+      .returning({ id: schema.campaigns.id });
 
-  let campaignId = campaign?.id;
-  if (!campaignId) {
-    const existing = await db
-      .select()
-      .from(schema.campaigns)
-      .where(eq(schema.campaigns.slug, "2025-efaf-em"))
-      .limit(1);
-    campaignId = existing[0]?.id;
+    if (inserted) {
+      campaignIds[c.slug] = inserted.id;
+    } else {
+      const [existing] = await db
+        .select({ id: schema.campaigns.id })
+        .from(schema.campaigns)
+        .where(eq(schema.campaigns.slug, c.slug))
+        .limit(1);
+      if (existing) campaignIds[c.slug] = existing.id;
+    }
   }
 
   for (const dim of DIMENSIONS) {
@@ -131,34 +198,40 @@ async function main() {
         name: dim.name,
         sortOrder: dim.sort,
       })
-      .onConflictDoNothing();
+      .onConflictDoUpdate({
+        target: schema.dimensions.code,
+        set: { name: dim.name, sortOrder: dim.sort },
+      });
   }
 
   const dims = await db.select().from(schema.dimensions);
   const dimByCode = Object.fromEntries(dims.map((d) => [d.code, d]));
 
-  const [weightConfig] = await db
-    .insert(schema.weightConfigs)
-    .values({ label: "Pesos iniciais v1 (igualitários)" })
-    .returning();
+  const existingWeights = await db.select().from(schema.weightConfigs).limit(1);
+  if (existingWeights.length === 0) {
+    const [weightConfig] = await db
+      .insert(schema.weightConfigs)
+      .values({ label: "Pesos iniciais v1 (igualitários)" })
+      .returning();
 
-  const equalWeight = (1 / 7).toFixed(4);
-  for (const code of [
-    "prova_conteudo",
-    "didatica_objetiva",
-    "didatica_humana",
-    "curriculo",
-    "video",
-    "entrevista",
-    "aula_teste",
-  ] as const) {
-    const dim = dimByCode[code];
-    if (dim && weightConfig) {
-      await db.insert(schema.weightConfigItems).values({
-        weightConfigId: weightConfig.id,
-        dimensionId: dim.id,
-        weight: equalWeight,
-      });
+    const equalWeight = (1 / 7).toFixed(4);
+    for (const code of [
+      "prova_conteudo",
+      "didatica_objetiva",
+      "didatica_humana",
+      "curriculo",
+      "video",
+      "entrevista",
+      "aula_teste",
+    ] as const) {
+      const dim = dimByCode[code];
+      if (dim && weightConfig) {
+        await db.insert(schema.weightConfigItems).values({
+          weightConfigId: weightConfig.id,
+          dimensionId: dim.id,
+          weight: equalWeight,
+        });
+      }
     }
   }
 
@@ -174,17 +247,8 @@ async function main() {
       .onConflictDoNothing();
   }
 
-  if (campaignId) {
-    for (const q of ["Q1", "Q2", "Q3", "Q4"]) {
-      await db.insert(schema.instruments).values({
-        campaignId,
-        code: q,
-        type: "subjective_question",
-        promptText: `[Texto original da pergunta ${q} pendente de fonte]`,
-        scaleMax: "30",
-        needsSourceText: true,
-      });
-    }
+  for (const slug of Object.keys(campaignIds)) {
+    await ensureInstruments(campaignIds[slug]);
   }
 
   console.log("Seed complete.");

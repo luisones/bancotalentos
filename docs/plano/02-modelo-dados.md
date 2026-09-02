@@ -17,7 +17,7 @@ UUID primários, `timestamptz` para datas. Drizzle schema em `lib/db/schema/`.
 `id`, `email` (citext unique), `name`, `role`, `active`, `neon_auth_user_id`, `created_at`
 
 ### candidates
-`id`, `full_name`, `email`, `phone`, `city`, `english_level`, `origin`, `highlighted_note`, `talent_classification`, `drive_cv_id` (dedup dev), `created_at`, `updated_at`
+`id`, `external_ref` (unique, `PES-…`), `full_name`, `email`, `phone`, `city`, `english_level`, `origin`, `highlighted_note`, `talent_classification`, `drive_cv_id` (legado, sem unique), `created_at`, `updated_at`
 
 ### campaigns
 `id`, `name`, `slug`, `description`, `starts_at`, `ends_at`, `status`, `created_at`
@@ -26,7 +26,7 @@ UUID primários, `timestamptz` para datas. Drizzle schema em `lib/db/schema/`.
 Catálogos com `name`, `slug`/`code`
 
 ### applications
-`id`, `candidate_id`, `campaign_id` (nullable), `discipline_id`, `operational_status`, `selective_status`, `applied_at`, `source`, `candidate_observation`, `differential_text`, `created_at`
+`id`, `external_ref` (unique, `CAND-…`), `candidate_id`, `campaign_id` (nullable), `discipline_id`, `operational_status`, `selective_status`, `applied_at`, `source`, `candidate_observation`, `differential_text`, `exam_registration` (matrícula 2026), `created_at`
 
 ### application_interests / application_potentials
 `application_id`, `discipline_id`, `segment_id`
@@ -53,13 +53,16 @@ Catálogos com `name`, `slug`/`code`
 `id`, `answer_id`, `provider_code`, `model_name`, `score_raw`, `scale_max`, `prompt_snapshot`
 
 ### teaching_practice_scores
-`application_id`, `practice_code`, `score_raw` (19 práticas, ingestão only)
+`application_id`, `practice_code`, `score_raw`, `raw_response`, `weight`, `direction` (19 práticas, ingestão only)
 
 ### imported_dimension_scores
 `application_id`, `dimension_id`, `score`, `source` (planilha import)
 
+### second_phase_confirmations
+Confirmações 2ª fase 2026: `campaign_id`, `candidate_id`, `external_ref`, `exam_choice`, `confirmed_at`, `email_diverged`
+
 ### lesson_test_criteria, lesson_test_evaluations, lesson_test_scores
-Rubrica 14 critérios; avaliação por avaliador; scores por critério
+Rubrica 14 critérios; avaliação por avaliador; scores por critério. `lesson_test_evaluations.external_ref` unique (`AT-…`) — a mesma pessoa pode avaliar várias aulas da mesma candidatura.
 
 ### unmatched_lesson_tests
 Avaliações órfãs da ingestão anonimizada
@@ -85,4 +88,4 @@ Entrevista/aula-teste: `application_id`, `type`, `scheduled_at`, `location`, `re
 - `application_interests(application_id)`, `application_potentials(application_id)`, `application_tags(application_id)`
 - `schedules(application_id)`, `weight_config_items(weight_config_id)`
 - `evaluations(application_id, dimension_id, instrument_id, evaluator_staff_id)` unique
-- `candidates(drive_cv_id)` unique, `staff_users(email)` unique
+- `candidates(external_ref)` unique, `applications(external_ref)` unique, `staff_users(email)` unique

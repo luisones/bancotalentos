@@ -28,8 +28,14 @@ export type RankingRow = {
   disciplineName: string | null;
   campaignName: string | null;
   selectiveStatus: string;
+  operationalStatus: string;
+  talentClassification: string;
+  /** Nota rápida: contexto em 200ms varrendo a lista. */
+  quickNote: string | null;
   consolidated: number | null;
   coverage: string;
+  coverageCount: number;
+  totalDimensions: number;
   appliedAt: Date | null;
 };
 
@@ -68,6 +74,9 @@ export async function getRankingRows(
       disciplineName: disciplines.name,
       campaignName: campaigns.name,
       selectiveStatus: applications.selectiveStatus,
+      operationalStatus: applications.operationalStatus,
+      talentClassification: candidates.talentClassification,
+      quickNote: candidates.highlightedNote,
       appliedAt: applications.appliedAt,
     })
     .from(applications)
@@ -96,6 +105,8 @@ export async function getRankingRows(
       coverage: result
         ? formatCoverage(result.coverage, result.totalDimensions)
         : "0/0",
+      coverageCount: result?.coverage ?? 0,
+      totalDimensions: result?.totalDimensions ?? 0,
     };
   });
 

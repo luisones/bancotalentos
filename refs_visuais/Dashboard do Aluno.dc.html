@@ -1,0 +1,1250 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Canvas · Ficha do Estudante — Liceu Jardim</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Archivo:ital,wght@0,500;0,600;0,700;1,600&family=Source+Sans+3:ital,wght@0,300;0,400;0,600;0,700;1,400&display=swap" rel="stylesheet" />
+<style>
+  html, body { margin: 0; padding: 0; }
+  body { font-family: "Source Sans 3", system-ui, sans-serif; -webkit-font-smoothing: antialiased; background: #F1EFEA; }
+  a { color: #0B3053; text-decoration: none; }
+  a:hover { color: #B98A4E; }
+  doc-page:not(:defined) { visibility: hidden; }
+  @media print { .no-print { display: none !important; } }
+</style>
+<script src="./doc-page.js"></script>
+</helmet>
+
+<sc-if value="{{ isPainel }}" hint-placeholder-val="{{ true }}">
+<div style="min-height: 100vh; background: #F1EFEA; color: #172026; padding-bottom: 90px">
+
+  <div style="background: #0B3053; color: #fff; padding: 0 30px; display: flex; align-items: center; justify-content: space-between; height: 58px; position: sticky; top: 0; z-index: 30">
+    <div style="display: flex; align-items: center; gap: 20px">
+      <img src="assets/logo-liceu-bege.png" alt="Liceu Jardim" style="height: 27px; width: auto; display: block" />
+      <div style="width: 1px; height: 22px; background: rgba(227,195,157,.35)"></div>
+      <div style="font-family: 'Archivo', sans-serif; font-size: 12.5px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; color: #E3C39D">Canvas · Portal Pedagógico</div>
+    </div>
+    <div style="display: flex; align-items: center; gap: 24px; font-size: 13.5px">
+      <div style="display: flex; gap: 20px; color: rgba(255,255,255,.6)">
+        <span>Painel</span>
+        <span style="color: #fff; font-weight: 600; box-shadow: inset 0 -2px 0 #E3C39D; padding-bottom: 3px">Estudantes</span>
+        <span>Turmas</span>
+        <span>Atividades</span>
+        <span>Relatórios</span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 10px; padding-left: 20px; border-left: 1px solid rgba(255,255,255,.15)">
+        <div style="width: 27px; height: 27px; border-radius: 50%; background: #E3C39D; color: #0B3053; display: grid; place-items: center; font-family: 'Archivo', sans-serif; font-weight: 700; font-size: 11.5px">RS</div>
+        <div style="line-height: 1.15">
+          <div style="font-weight: 600; font-size: 12.5px">Roberto Salgueiro</div>
+          <div style="font-size: 10.5px; color: #E3C39D; letter-spacing: .04em">Direção Geral · acesso total</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div style="max-width: 1560px; margin: 0 auto; padding: 0 30px">
+
+    <div style="display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: #6E7378; padding: 18px 0 14px">
+      <a href="#" onClick="{{ abrirBusca }}">Estudantes</a><span style="color: #B9BDBF">/</span>
+      <span>Ensino Médio · 1.ª série B</span><span style="color: #B9BDBF">/</span>
+      <span style="color: #0B3053; font-weight: 600">Marina Sartori Albuquerque</span>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(620px, 1fr)); gap: 20px; align-items: start">
+
+      <div style="display: flex; flex-direction: column; gap: 16px; min-width: 0">
+
+        <div style="background: #fff; border: 1px solid #E2DDD4; border-left: 4px solid #9E3B2C; border-radius: 3px">
+          <div style="display: flex; align-items: center; justify-content: space-between; padding: 11px 18px; border-bottom: 1px solid #EFEBE3">
+            <div style="font-family: 'Archivo', sans-serif; font-size: 10.5px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: #9E3B2C">Alertas críticos deste estudante</div>
+            <div style="font-size: 11.5px; color: #8B9096">Visível apenas para perfis com acesso nível 4</div>
+          </div>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1px; background: #EFEBE3">
+            <sc-for list="{{ alertas }}" as="a" hint-placeholder-count="4">
+              <div onClick="{{ a.abrir }}" style="background: #fff; padding: 13px 16px; cursor: pointer" style-hover="background: #FBF8F5">
+                <div style="display: flex; align-items: center; gap: 8px">
+                  <span style="width: 8px; height: 8px; border-radius: 50%; background: {{ a.cor }}"></span>
+                  <span style="font-family: 'Archivo', sans-serif; font-size: 10px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: {{ a.cor }}">{{ a.tag }}</span>
+                </div>
+                <div style="font-size: 13.5px; font-weight: 600; margin-top: 6px; line-height: 1.25">{{ a.titulo }}</div>
+                <div style="font-size: 12px; color: #6E7378; margin-top: 2px; line-height: 1.35">{{ a.detalhe }}</div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+
+        <div style="background: #fff; border: 1px solid #E2DDD4; border-radius: 3px; padding: 24px 26px">
+          <div style="display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start">
+            <div onClick="{{ ampliarFoto }}" style="flex: none; width: 104px; height: 128px; border-radius: 2px; background: #0B3053; color: #E3C39D; display: grid; place-items: center; cursor: pointer; position: relative; overflow: hidden">
+              <div style="font-family: 'Archivo', sans-serif; font-weight: 700; font-size: 34px; letter-spacing: -.02em">MA</div>
+              <div style="position: absolute; bottom: 0; left: 0; right: 0; background: rgba(11,48,83,.9); color: #E3C39D; font-size: 9.5px; letter-spacing: .1em; text-transform: uppercase; text-align: center; padding: 4px 0">Ampliar foto</div>
+            </div>
+            <div style="flex: 1 1 320px; min-width: 0">
+              <div style="font-family: 'Archivo', sans-serif; font-size: 10.5px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: #B98A4E">Ficha completa do estudante · 2026</div>
+              <h1 style="font-family: 'Archivo', sans-serif; font-size: clamp(23px, 2.1vw, 33px); overflow-wrap: anywhere; font-weight: 700; letter-spacing: -.02em; margin: 6px 0 10px; color: #0B3053; line-height: 1.05">Marina Sartori Albuquerque</h1>
+              <div style="display: flex; flex-wrap: wrap; gap: 7px 8px; font-size: 12.5px; color: #4C5257">
+                <sc-for list="{{ chips }}" as="c" hint-placeholder-count="6">
+                  <span style="background: #F4F2ED; border: 1px solid #E6E1D8; padding: 3px 10px; border-radius: 2px">{{ c }}</span>
+                </sc-for>
+              </div>
+              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 18px 26px; margin-top: 20px">
+                <sc-for list="{{ blocosMain }}" as="b" hint-placeholder-count="6">
+                  <div>
+                    <div style="font-family: 'Archivo', sans-serif; font-size: 9.5px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: #8B9096; padding-bottom: 6px; border-bottom: 1px solid #EFEBE3; margin-bottom: 8px">{{ b.titulo }}</div>
+                    <sc-for list="{{ b.itens }}" as="i" hint-placeholder-count="3">
+                      <div style="display: flex; align-items: baseline; gap: 8px; padding: 2px 0">
+                        <span style="font-size: 11.5px; color: #8B9096; min-width: 74px">{{ i.rotulo }}</span>
+                        <span style="font-size: 13px; font-weight: 600; color: {{ i.cor }}">{{ i.valor }}</span>
+                      </div>
+                    </sc-for>
+                    <sc-if value="{{ b.acao }}" hint-placeholder-val="{{ false }}">
+                      <div onClick="{{ b.acao }}" style="font-size: 11.5px; color: #B98A4E; font-weight: 600; cursor: pointer; margin-top: 6px">{{ b.acaoLabel }} →</div>
+                    </sc-if>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 8px; flex: 1 1 190px; max-width: 240px; min-width: 0">
+              <button onClick="{{ abrirImpressao }}" style="font-family: 'Archivo', sans-serif; font-size: 13px; font-weight: 600; letter-spacing: .03em; background: #0B3053; color: #fff; border: 0; border-radius: 2px; padding: 12px 18px; cursor: pointer; text-align: left" style-hover="background: #16456F">Imprimir relatório…</button>
+              <button onClick="{{ agendarReuniao }}" style="font-family: 'Archivo', sans-serif; font-size: 13px; font-weight: 600; letter-spacing: .03em; background: #fff; color: #0B3053; border: 1px solid #C9D2DB; border-radius: 2px; padding: 12px 18px; cursor: pointer; text-align: left" style-hover="background: #F4F7FA">Agendar reunião</button>
+              <button onClick="{{ registrarOcorrencia }}" style="font-family: 'Archivo', sans-serif; font-size: 13px; font-weight: 600; letter-spacing: .03em; background: #fff; color: #0B3053; border: 1px solid #C9D2DB; border-radius: 2px; padding: 12px 18px; cursor: pointer; text-align: left" style-hover="background: #F4F7FA">Registrar ocorrência</button>
+              <button onClick="{{ verHistorico }}" style="font-family: 'Archivo', sans-serif; font-size: 13px; font-weight: 600; letter-spacing: .03em; background: #F7F5F1; color: #B98A4E; border: 1px solid #E6DCCC; border-radius: 2px; padding: 12px 18px; cursor: pointer; text-align: left" style-hover="background: #F2EDE4">Análise de histórico ✦</button>
+              <div style="font-size: 11px; color: #9AA0A5; line-height: 1.35; margin-top: 2px">Última sincronização com o Sophia hoje, 06h10.</div>
+            </div>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(152px, 1fr)); gap: 1px; background: #E2DDD4; border: 1px solid #E2DDD4; border-radius: 3px; overflow: hidden">
+          <sc-for list="{{ kpis }}" as="k" hint-placeholder-count="6">
+            <div style="background: #fff; padding: 16px 18px">
+              <div style="font-family: 'Archivo', sans-serif; font-size: 27px; font-weight: 700; color: {{ k.cor }}; letter-spacing: -.02em; line-height: 1; font-variant-numeric: tabular-nums">{{ k.valor }}</div>
+              <div style="font-size: 12px; font-weight: 600; margin-top: 7px; line-height: 1.2">{{ k.label }}</div>
+              <div style="font-size: 11px; color: #9AA0A5; margin-top: 2px">{{ k.nota }}</div>
+            </div>
+          </sc-for>
+        </div>
+
+        <div style="display: flex; align-items: center; justify-content: space-between; padding: 6px 2px 0">
+          <div style="font-family: 'Archivo', sans-serif; font-size: 12px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: #8B9096">Áreas de informação · clique para abrir</div>
+          <div style="display: flex; gap: 8px">
+            <button onClick="{{ abrirTudo }}" style="font-size: 12px; font-family: 'Archivo', sans-serif; font-weight: 600; background: #fff; border: 1px solid #C9D2DB; color: #0B3053; border-radius: 2px; padding: 6px 12px; cursor: pointer">Expandir tudo</button>
+            <button onClick="{{ fecharTudo }}" style="font-size: 12px; font-family: 'Archivo', sans-serif; font-weight: 600; background: #fff; border: 1px solid #C9D2DB; color: #0B3053; border-radius: 2px; padding: 6px 12px; cursor: pointer">Recolher tudo</button>
+          </div>
+        </div>
+
+        <div style="background: #fff; border: 1px solid #E2DDD4; border-radius: 3px; overflow: hidden">
+          <div onClick="{{ toggle.notas }}" style="display: grid; grid-template-columns: 5px minmax(0, 1fr) auto; gap: 16px; align-items: center; padding: 15px 20px 15px 0; cursor: pointer" style-hover="background: #FBFAF8">
+            <div style="width: 5px; height: 40px; background: #0B3053"></div>
+            <div>
+              <div style="font-family: 'Archivo', sans-serif; font-size: 17px; font-weight: 700; color: #0B3053">Notas e desempenho</div>
+              <div style="font-size: 12.5px; color: #6E7378; margin-top: 1px">Média geral 6,8 · 12 disciplinas · 3 abaixo da média da turma · 4.º bimestre em curso</div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 14px">
+              <span style="font-size: 10px; font-family: 'Archivo', sans-serif; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: #9E3B2C; background: #FAF0EE; border: 1px solid #EDD9D4; padding: 3px 8px; border-radius: 2px">2 alertas</span>
+              <span style="font-family: 'Archivo', sans-serif; font-size: 15px; color: #B98A4E; width: 14px; text-align: center">{{ chev.notas }}</span>
+            </div>
+          </div>
+          <sc-if value="{{ open.notas }}" hint-placeholder-val="{{ true }}">
+            <div style="border-top: 1px solid #EFEBE3; padding: 18px 20px 22px; overflow-x: auto">
+              <div style="display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 14px">
+                <div style="display: flex; flex-wrap: wrap; gap: 1px; background: #E2DDD4; border: 1px solid #E2DDD4; border-radius: 2px; overflow: hidden">
+                  <sc-for list="{{ bimTabs }}" as="t" hint-placeholder-count="4">
+                    <div onClick="{{ t.sel }}" style="padding: 7px 16px; font-family: 'Archivo', sans-serif; font-size: 12.5px; font-weight: 600; cursor: pointer; background: {{ t.bg }}; color: {{ t.cor }}">{{ t.rotulo }}</div>
+                  </sc-for>
+                </div>
+                <div style="font-size: 11.5px; color: #9AA0A5">Clique em uma disciplina para ver as avaliações do bimestre</div>
+              </div>
+              <div style="display: grid; grid-template-columns: minmax(190px, 1fr) 92px 92px 92px 70px; gap: 12px; min-width: 640px; padding: 0 12px 8px; border-bottom: 1px solid #E2DDD4">
+                <div style="font-size: 10px; font-family: 'Archivo', sans-serif; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: #8B9096">Disciplina · professor</div>
+                <div style="font-size: 10px; font-family: 'Archivo', sans-serif; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: #8B9096; text-align: center">Nota</div>
+                <div style="font-size: 10px; font-family: 'Archivo', sans-serif; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: #8B9096; text-align: center">Média turma</div>
+                <div style="font-size: 10px; font-family: 'Archivo', sans-serif; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: #8B9096; text-align: center">Faltas</div>
+                <div style="font-size: 10px; font-family: 'Archivo', sans-serif; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: #8B9096; text-align: right">Situação</div>
+              </div>
+              <sc-for list="{{ disciplinas }}" as="d" hint-placeholder-count="12">
+                <div style="border-bottom: 1px solid #F5F2EC">
+                  <div onClick="{{ d.alternar }}" style="display: grid; grid-template-columns: minmax(190px, 1fr) 92px 92px 92px 70px; gap: 12px; min-width: 640px; align-items: center; padding: 10px 12px; cursor: pointer" style-hover="background: #FBFAF8">
+                    <div style="display: flex; align-items: baseline; gap: 9px; min-width: 0">
+                      <span style="font-family: 'Archivo', sans-serif; font-size: 12px; color: #B98A4E; width: 10px">{{ d.chev }}</span>
+                      <span style="font-size: 13.5px; font-weight: 600">{{ d.nome }}</span>
+                      <span style="font-size: 11.5px; color: #9AA0A5">{{ d.prof }}</span>
+                    </div>
+                    <div style="text-align: center; font-family: 'Archivo', sans-serif; font-size: 16px; font-weight: 700; color: {{ d.cor }}; font-variant-numeric: tabular-nums">{{ d.nota }}</div>
+                    <div style="text-align: center; font-size: 13px; color: #6E7378; font-variant-numeric: tabular-nums">{{ d.turma }}</div>
+                    <div style="text-align: center; font-size: 13px; color: #6E7378; font-variant-numeric: tabular-nums">{{ d.faltas }}</div>
+                    <div style="text-align: right; font-size: 11px; font-weight: 600; color: {{ d.cor }}">{{ d.situacao }}</div>
+                  </div>
+                  <sc-if value="{{ d.aberto }}" hint-placeholder-val="{{ false }}">
+                    <div style="background: #FAFAF7; border-top: 1px solid #F0EDE7; padding: 12px 12px 14px 34px">
+                      <div style="font-family: 'Archivo', sans-serif; font-size: 9.5px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: #8B9096; margin-bottom: 8px">Avaliações do bimestre</div>
+                      <sc-for list="{{ d.avaliacoes }}" as="v" hint-placeholder-count="4">
+                        <div style="display: grid; grid-template-columns: minmax(0, 1fr) 80px 70px 60px; gap: 12px; align-items: center; padding: 6px 0; border-bottom: 1px solid #EFEDE6">
+                          <div style="font-size: 12.5px">{{ v.nome }}</div>
+                          <div style="font-size: 11.5px; color: #8B9096">{{ v.data }}</div>
+                          <div style="font-size: 11.5px; color: #8B9096">peso {{ v.peso }}</div>
+                          <div style="text-align: right; font-family: 'Archivo', sans-serif; font-size: 14px; font-weight: 700; color: {{ v.cor }}; font-variant-numeric: tabular-nums">{{ v.nota }}</div>
+                        </div>
+                      </sc-for>
+                      <div style="font-size: 11.5px; color: #6E7378; margin-top: 9px; line-height: 1.4">{{ d.parecer }}</div>
+                    </div>
+                  </sc-if>
+                </div>
+              </sc-for>
+            </div>
+          </sc-if>
+        </div>
+
+        <div style="background: #fff; border: 1px solid #E2DDD4; border-radius: 3px; overflow: hidden">
+          <div onClick="{{ toggle.faltas }}" style="display: grid; grid-template-columns: 5px minmax(0, 1fr) auto; gap: 16px; align-items: center; padding: 15px 20px 15px 0; cursor: pointer" style-hover="background: #FBFAF8">
+            <div style="width: 5px; height: 40px; background: #9E3B2C"></div>
+            <div>
+              <div style="font-family: 'Archivo', sans-serif; font-size: 17px; font-weight: 700; color: #0B3053">Faltas e frequência</div>
+              <div style="font-size: 12.5px; color: #6E7378; margin-top: 1px">87,4% de frequência · 32 faltas no ano · limite regimental em 75%</div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 14px">
+              <span style="font-size: 10px; font-family: 'Archivo', sans-serif; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: #9E3B2C; background: #FAF0EE; border: 1px solid #EDD9D4; padding: 3px 8px; border-radius: 2px">Em queda</span>
+              <span style="font-family: 'Archivo', sans-serif; font-size: 15px; color: #B98A4E; width: 14px; text-align: center">{{ chev.faltas }}</span>
+            </div>
+          </div>
+          <sc-if value="{{ open.faltas }}" hint-placeholder-val="{{ true }}">
+            <div style="border-top: 1px solid #EFEBE3; padding: 18px 20px 22px; display: grid; grid-template-columns: repeat(auto-fit, minmax(330px, 1fr)); gap: 30px">
+              <div>
+                <div style="font-family: 'Archivo', sans-serif; font-size: 9.5px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: #8B9096; margin-bottom: 12px">Frequência por bimestre</div>
+                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; align-items: end; height: 128px">
+                  <sc-for list="{{ freqBim }}" as="f" hint-placeholder-count="4">
+                    <div style="display: flex; flex-direction: column; justify-content: flex-end; height: 100%; gap: 6px">
+                      <div style="font-family: 'Archivo', sans-serif; font-size: 13px; font-weight: 700; color: {{ f.cor }}; text-align: center; font-variant-numeric: tabular-nums">{{ f.pct }}</div>
+                      <div style="height: 74px; display: flex; align-items: flex-end">
+                        <div style="width: 100%; height: {{ f.altura }}; background: {{ f.cor }}; border-radius: 1px 1px 0 0"></div>
+                      </div>
+                      <div style="text-align: center; border-top: 1px solid #E2DDD4; padding-top: 6px">
+                        <div style="font-size: 11.5px; font-weight: 600">{{ f.rotulo }}</div>
+                        <div style="font-size: 11px; color: #9AA0A5">{{ f.faltas }} faltas</div>
+                      </div>
+                    </div>
+                  </sc-for>
+                </div>
+                <div style="font-size: 12px; color: #6E7378; margin-top: 14px; line-height: 1.45; background: #FAF0EE; border-left: 3px solid #9E3B2C; padding: 10px 12px">Queda concentrada nas primeiras aulas: 19 das 32 faltas são do 1.º horário. Nove ausências coincidem com atendimentos na enfermaria.</div>
+              </div>
+              <div>
+                <div style="font-family: 'Archivo', sans-serif; font-size: 9.5px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: #8B9096; margin-bottom: 12px">Faltas por disciplina</div>
+                <sc-for list="{{ faltasDisc }}" as="f" hint-placeholder-count="8">
+                  <div style="display: grid; grid-template-columns: 150px minmax(0, 1fr) 52px; gap: 12px; align-items: center; padding: 5px 0">
+                    <div style="font-size: 12.5px">{{ f.nome }}</div>
+                    <div style="height: 8px; background: #F1EFEA; border-radius: 1px; overflow: hidden">
+                      <div style="height: 100%; width: {{ f.barra }}; background: {{ f.cor }}"></div>
+                    </div>
+                    <div style="text-align: right; font-size: 12.5px; font-weight: 600; font-variant-numeric: tabular-nums; color: {{ f.cor }}">{{ f.valor }}</div>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </sc-if>
+        </div>
+
+        <div style="background: #fff; border: 1px solid #E2DDD4; border-radius: 3px; overflow: hidden">
+          <div onClick="{{ toggle.ocorrencias }}" style="display: grid; grid-template-columns: 5px minmax(0, 1fr) auto; gap: 16px; align-items: center; padding: 15px 20px 15px 0; cursor: pointer" style-hover="background: #FBFAF8">
+            <div style="width: 5px; height: 40px; background: #B98A4E"></div>
+            <div>
+              <div style="font-family: 'Archivo', sans-serif; font-size: 17px; font-weight: 700; color: #0B3053">Ocorrências e elogios</div>
+              <div style="font-size: 12.5px; color: #6E7378; margin-top: 1px">7 ocorrências · 4 elogios · última em 28/07/2026</div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 14px">
+              <span style="font-family: 'Archivo', sans-serif; font-size: 15px; color: #B98A4E; width: 14px; text-align: center">{{ chev.ocorrencias }}</span>
+            </div>
+          </div>
+          <sc-if value="{{ open.ocorrencias }}" hint-placeholder-val="{{ true }}">
+            <div style="border-top: 1px solid #EFEBE3; padding: 18px 20px 22px">
+              <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 1px; background: #E2DDD4; border: 1px solid #E2DDD4; border-radius: 2px; overflow: hidden; margin-bottom: 16px">
+                <sc-for list="{{ tiposOcorrencia }}" as="t" hint-placeholder-count="5">
+                  <div onClick="{{ t.filtrar }}" style="background: {{ t.bg }}; padding: 12px 14px; cursor: pointer">
+                    <div style="font-family: 'Archivo', sans-serif; font-size: 21px; font-weight: 700; color: {{ t.cor }}; line-height: 1; font-variant-numeric: tabular-nums">{{ t.qtd }}</div>
+                    <div style="font-size: 11.5px; font-weight: 600; margin-top: 5px; line-height: 1.2">{{ t.nome }}</div>
+                  </div>
+                </sc-for>
+              </div>
+              <div style="font-size: 11.5px; color: #9AA0A5; margin-bottom: 8px">{{ filtroLabel }}</div>
+              <sc-for list="{{ ocorrencias }}" as="o" hint-placeholder-count="6">
+                <div onClick="{{ o.abrir }}" style="display: grid; grid-template-columns: 84px 130px minmax(0, 1fr) auto; gap: 14px; align-items: center; padding: 11px 12px; border-bottom: 1px solid #F5F2EC; cursor: pointer" style-hover="background: #FBFAF8">
+                  <div style="font-size: 12px; color: #6E7378; font-variant-numeric: tabular-nums">{{ o.data }}</div>
+                  <div><span style="font-size: 10.5px; font-family: 'Archivo', sans-serif; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: {{ o.cor }}; background: {{ o.bg }}; border: 1px solid {{ o.borda }}; padding: 3px 8px; border-radius: 2px">{{ o.tipo }}</span></div>
+                  <div style="min-width: 0">
+                    <div style="font-size: 13.5px; font-weight: 600">{{ o.titulo }}</div>
+                    <div style="font-size: 12px; color: #8B9096">{{ o.autor }}</div>
+                  </div>
+                  <div style="font-size: 11.5px; color: #B98A4E; font-weight: 600">detalhar →</div>
+                </div>
+              </sc-for>
+            </div>
+          </sc-if>
+        </div>
+
+        <div style="background: #fff; border: 1px solid #E2DDD4; border-radius: 3px; overflow: hidden">
+          <div onClick="{{ toggle.reunioes }}" style="display: grid; grid-template-columns: 5px minmax(0, 1fr) auto; gap: 16px; align-items: center; padding: 15px 20px 15px 0; cursor: pointer" style-hover="background: #FBFAF8">
+            <div style="width: 5px; height: 40px; background: #0B3053"></div>
+            <div>
+              <div style="font-family: 'Archivo', sans-serif; font-size: 17px; font-weight: 700; color: #0B3053">Reuniões e entrevistas com a família</div>
+              <div style="font-size: 12.5px; color: #6E7378; margin-top: 1px">5 encontros em 2026 · 3 atas restritas · próxima em 21/08</div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 14px">
+              <span style="font-size: 10px; font-family: 'Archivo', sans-serif; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: #0B3053; background: #EEF3F8; border: 1px solid #D5DEE6; padding: 3px 8px; border-radius: 2px">Confidencial</span>
+              <span style="font-family: 'Archivo', sans-serif; font-size: 15px; color: #B98A4E; width: 14px; text-align: center">{{ chev.reunioes }}</span>
+            </div>
+          </div>
+          <sc-if value="{{ open.reunioes }}" hint-placeholder-val="{{ true }}">
+            <div style="border-top: 1px solid #EFEBE3; padding: 18px 20px 22px">
+              <div style="display: flex; align-items: center; justify-content: space-between; background: #F7F5F1; border: 1px solid #E6DCCC; border-radius: 2px; padding: 12px 16px; margin-bottom: 16px">
+                <div style="font-size: 12.5px; color: #4C5257; max-width: 620px; line-height: 1.4">As atas de entrevista não são exportadas pelo Sophia — o Canvas lê o registro digitado pela coordenação. Você pode gerar um resumo único de todos os encontros.</div>
+                <button onClick="{{ resumirAtas }}" style="font-family: 'Archivo', sans-serif; font-size: 12.5px; font-weight: 700; letter-spacing: .03em; background: #B98A4E; color: #fff; border: 0; border-radius: 2px; padding: 10px 18px; cursor: pointer; white-space: nowrap">{{ labelResumo }}</button>
+              </div>
+              <sc-for list="{{ reunioes }}" as="r" hint-placeholder-count="5">
+                <div onClick="{{ r.abrir }}" style="display: grid; grid-template-columns: 90px minmax(0, 1fr) 190px auto; gap: 16px; align-items: center; padding: 12px; border-bottom: 1px solid #F5F2EC; cursor: pointer" style-hover="background: #FBFAF8">
+                  <div style="font-size: 12px; color: #6E7378; font-variant-numeric: tabular-nums">{{ r.data }}</div>
+                  <div style="min-width: 0">
+                    <div style="font-size: 13.5px; font-weight: 600">{{ r.titulo }}</div>
+                    <div style="font-size: 12px; color: #8B9096">{{ r.tipo }} · {{ r.duracao }}</div>
+                  </div>
+                  <div style="font-size: 12px; color: #6E7378; line-height: 1.3">{{ r.participantes }}</div>
+                  <div style="font-size: 11.5px; color: #B98A4E; font-weight: 600">ver ata →</div>
+                </div>
+              </sc-for>
+            </div>
+          </sc-if>
+        </div>
+
+        <div style="background: #fff; border: 1px solid #E2DDD4; border-radius: 3px; overflow: hidden">
+          <div onClick="{{ toggle.saude }}" style="display: grid; grid-template-columns: 5px minmax(0, 1fr) auto; gap: 16px; align-items: center; padding: 15px 20px 15px 0; cursor: pointer" style-hover="background: #FBFAF8">
+            <div style="width: 5px; height: 40px; background: #9E3B2C"></div>
+            <div>
+              <div style="font-family: 'Archivo', sans-serif; font-size: 17px; font-weight: 700; color: #0B3053">Saúde, NEE e adaptações</div>
+              <div style="font-size: 12.5px; color: #6E7378; margin-top: 1px">Laudo de 2024 · 6 adaptações ativas · 2 alergias graves · restrição de saída</div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 14px">
+              <span style="font-size: 10px; font-family: 'Archivo', sans-serif; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: #9E3B2C; background: #FAF0EE; border: 1px solid #EDD9D4; padding: 3px 8px; border-radius: 2px">Acesso restrito</span>
+              <span style="font-family: 'Archivo', sans-serif; font-size: 15px; color: #B98A4E; width: 14px; text-align: center">{{ chev.saude }}</span>
+            </div>
+          </div>
+          <sc-if value="{{ open.saude }}" hint-placeholder-val="{{ false }}">
+            <div style="border-top: 1px solid #EFEBE3; padding: 18px 20px 22px; display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 26px">
+              <sc-for list="{{ blocosSaude }}" as="b" hint-placeholder-count="3">
+                <div>
+                  <div style="font-family: 'Archivo', sans-serif; font-size: 9.5px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: #8B9096; padding-bottom: 7px; border-bottom: 1px solid #EFEBE3; margin-bottom: 10px">{{ b.titulo }}</div>
+                  <sc-for list="{{ b.itens }}" as="i" hint-placeholder-count="4">
+                    <div style="display: grid; grid-template-columns: 8px minmax(0, 1fr); gap: 10px; align-items: start; padding: 5px 0">
+                      <span style="width: 7px; height: 7px; border-radius: 50%; background: {{ i.cor }}; margin-top: 6px"></span>
+                      <div>
+                        <div style="font-size: 13px; font-weight: 600; line-height: 1.3">{{ i.titulo }}</div>
+                        <div style="font-size: 12px; color: #6E7378; line-height: 1.35">{{ i.detalhe }}</div>
+                      </div>
+                    </div>
+                  </sc-for>
+                </div>
+              </sc-for>
+            </div>
+          </sc-if>
+        </div>
+
+        <div style="background: #fff; border: 1px solid #E2DDD4; border-radius: 3px; overflow: hidden">
+          <div onClick="{{ toggle.extra }}" style="display: grid; grid-template-columns: 5px minmax(0, 1fr) auto; gap: 16px; align-items: center; padding: 15px 20px 15px 0; cursor: pointer" style-hover="background: #FBFAF8">
+            <div style="width: 5px; height: 40px; background: #2F6B4F"></div>
+            <div>
+              <div style="font-family: 'Archivo', sans-serif; font-size: 17px; font-weight: 700; color: #0B3053">Extracurriculares e matrículas</div>
+              <div style="font-size: 12.5px; color: #6E7378; margin-top: 1px">After School, IEP, 2 eletivas e judô · 212 h no ano</div>
+            </div>
+            <span style="font-family: 'Archivo', sans-serif; font-size: 15px; color: #B98A4E; width: 14px; text-align: center">{{ chev.extra }}</span>
+          </div>
+          <sc-if value="{{ open.extra }}" hint-placeholder-val="{{ false }}">
+            <div style="border-top: 1px solid #EFEBE3; padding: 18px 20px 22px">
+              <sc-for list="{{ extras }}" as="e" hint-placeholder-count="6">
+                <div style="display: grid; grid-template-columns: minmax(0, 1fr) 120px 96px 108px; gap: 16px; align-items: center; padding: 11px 12px; border-bottom: 1px solid #F5F2EC">
+                  <div>
+                    <div style="font-size: 13.5px; font-weight: 600">{{ e.nome }}</div>
+                    <div style="font-size: 12px; color: #8B9096">{{ e.detalhe }}</div>
+                  </div>
+                  <div style="font-size: 12px; color: #6E7378">{{ e.periodo }}</div>
+                  <div style="text-align: right; font-family: 'Archivo', sans-serif; font-size: 14px; font-weight: 700; color: #0B3053; font-variant-numeric: tabular-nums">{{ e.ch }}</div>
+                  <div style="text-align: right; font-size: 12.5px; font-weight: 600; color: {{ e.cor }}">{{ e.freq }}</div>
+                </div>
+              </sc-for>
+              <div style="font-size: 12px; color: #6E7378; margin-top: 14px; line-height: 1.45">Vaga no After School às terças e quintas; a família solicitou revisão do contraturno em maio (ver ata de 12/05).</div>
+            </div>
+          </sc-if>
+        </div>
+
+        <div style="background: #fff; border: 1px solid #E2DDD4; border-radius: 3px; overflow: hidden">
+          <div onClick="{{ toggle.olimpiadas }}" style="display: grid; grid-template-columns: 5px minmax(0, 1fr) auto; gap: 16px; align-items: center; padding: 15px 20px 15px 0; cursor: pointer" style-hover="background: #FBFAF8">
+            <div style="width: 5px; height: 40px; background: #B98A4E"></div>
+            <div>
+              <div style="font-family: 'Archivo', sans-serif; font-size: 17px; font-weight: 700; color: #0B3053">Olimpíadas e premiações</div>
+              <div style="font-size: 12.5px; color: #6E7378; margin-top: 1px">1 prata, 1 bronze e 3 menções honrosas desde 2023</div>
+            </div>
+            <span style="font-family: 'Archivo', sans-serif; font-size: 15px; color: #B98A4E; width: 14px; text-align: center">{{ chev.olimpiadas }}</span>
+          </div>
+          <sc-if value="{{ open.olimpiadas }}" hint-placeholder-val="{{ false }}">
+            <div style="border-top: 1px solid #EFEBE3; padding: 18px 20px 22px; display: grid; grid-template-columns: repeat(auto-fit, minmax(215px, 1fr)); gap: 12px">
+              <sc-for list="{{ olimpiadas }}" as="o" hint-placeholder-count="6">
+                <div style="border: 1px solid #E2DDD4; border-radius: 2px; padding: 13px 15px; background: #FBFAF8">
+                  <div style="display: flex; align-items: center; gap: 9px">
+                    <span style="width: 16px; height: 16px; border-radius: 50%; background: {{ o.medalCor }}; border: 2px solid {{ o.medalBorda }}"></span>
+                    <span style="font-family: 'Archivo', sans-serif; font-size: 12.5px; font-weight: 700; color: #0B3053">{{ o.resultado }}</span>
+                  </div>
+                  <div style="font-size: 13px; font-weight: 600; margin-top: 8px; line-height: 1.3">{{ o.nome }}</div>
+                  <div style="font-size: 11.5px; color: #8B9096; margin-top: 3px">{{ o.detalhe }}</div>
+                </div>
+              </sc-for>
+            </div>
+          </sc-if>
+        </div>
+
+        <div style="background: #fff; border: 1px solid #E2DDD4; border-radius: 3px; overflow: hidden">
+          <div onClick="{{ toggle.simulados }}" style="display: grid; grid-template-columns: 5px minmax(0, 1fr) auto; gap: 16px; align-items: center; padding: 15px 20px 15px 0; cursor: pointer" style-hover="background: #FBFAF8">
+            <div style="width: 5px; height: 40px; background: #0B3053"></div>
+            <div>
+              <div style="font-family: 'Archivo', sans-serif; font-size: 17px; font-weight: 700; color: #0B3053">Simulados e redação</div>
+              <div style="font-size: 12.5px; color: #6E7378; margin-top: 1px">Evolucional e Bernoulli · 3 aplicações · redação 720 na última</div>
+            </div>
+            <span style="font-family: 'Archivo', sans-serif; font-size: 15px; color: #B98A4E; width: 14px; text-align: center">{{ chev.simulados }}</span>
+          </div>
+          <sc-if value="{{ open.simulados }}" hint-placeholder-val="{{ false }}">
+            <div style="border-top: 1px solid #EFEBE3; padding: 18px 20px 22px; display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 30px">
+              <div>
+                <div style="font-family: 'Archivo', sans-serif; font-size: 9.5px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: #8B9096; margin-bottom: 10px">Desempenho por área do conhecimento</div>
+                <div style="display: grid; grid-template-columns: 132px repeat(3, 1fr); gap: 8px; padding-bottom: 7px; border-bottom: 1px solid #E2DDD4">
+                  <div style="font-size: 11px; color: #8B9096">Área</div>
+                  <sc-for list="{{ aplicacoes }}" as="a" hint-placeholder-count="3">
+                    <div style="font-size: 11px; color: #8B9096; text-align: center">{{ a }}</div>
+                  </sc-for>
+                </div>
+                <sc-for list="{{ areas }}" as="a" hint-placeholder-count="5">
+                  <div style="display: grid; grid-template-columns: 132px repeat(3, 1fr); gap: 8px; align-items: center; padding: 8px 0; border-bottom: 1px solid #F5F2EC">
+                    <div style="font-size: 12.5px; font-weight: 600">{{ a.nome }}</div>
+                    <sc-for list="{{ a.notas }}" as="n" hint-placeholder-count="3">
+                      <div style="text-align: center; font-family: 'Archivo', sans-serif; font-size: 13.5px; font-weight: 700; color: {{ n.cor }}; background: {{ n.bg }}; border-radius: 2px; padding: 4px 0; font-variant-numeric: tabular-nums">{{ n.v }}</div>
+                    </sc-for>
+                  </div>
+                </sc-for>
+              </div>
+              <div>
+                <div style="font-family: 'Archivo', sans-serif; font-size: 9.5px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: #8B9096; margin-bottom: 10px">Redação por competência · última produção</div>
+                <sc-for list="{{ competencias }}" as="c" hint-placeholder-count="5">
+                  <div style="display: grid; grid-template-columns: minmax(0, 1fr) 90px 46px; gap: 10px; align-items: center; padding: 6px 0">
+                    <div style="font-size: 12.5px">{{ c.nome }}</div>
+                    <div style="height: 8px; background: #F1EFEA; border-radius: 1px; overflow: hidden">
+                      <div style="height: 100%; width: {{ c.barra }}; background: {{ c.cor }}"></div>
+                    </div>
+                    <div style="text-align: right; font-size: 12.5px; font-weight: 700; font-variant-numeric: tabular-nums">{{ c.nota }}</div>
+                  </div>
+                </sc-for>
+                <div style="font-size: 12px; color: #6E7378; margin-top: 12px; line-height: 1.45; background: #F7F5F1; padding: 10px 12px; border-left: 3px solid #E3C39D">Competência 3 (argumentação) é o gargalo em todas as produções; a correção por IA e a correção humana divergem em 80 pontos na última.</div>
+              </div>
+            </div>
+          </sc-if>
+        </div>
+
+        <div style="background: #fff; border: 1px solid #E2DDD4; border-radius: 3px; overflow: hidden">
+          <div onClick="{{ toggle.ingles }}" style="display: grid; grid-template-columns: 5px minmax(0, 1fr) auto; gap: 16px; align-items: center; padding: 15px 20px 15px 0; cursor: pointer" style-hover="background: #FBFAF8">
+            <div style="width: 5px; height: 40px; background: #2F6B4F"></div>
+            <div>
+              <div style="font-family: 'Archivo', sans-serif; font-size: 17px; font-weight: 700; color: #0B3053">Inglês — nível, V-Test e Cambridge</div>
+              <div style="font-size: 12.5px; color: #6E7378; margin-top: 1px">Turma IEP 4 · B1+ · PET com Merit em 2025</div>
+            </div>
+            <span style="font-family: 'Archivo', sans-serif; font-size: 15px; color: #B98A4E; width: 14px; text-align: center">{{ chev.ingles }}</span>
+          </div>
+          <sc-if value="{{ open.ingles }}" hint-placeholder-val="{{ false }}">
+            <div style="border-top: 1px solid #EFEBE3; padding: 18px 20px 22px">
+              <div style="display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; align-items: end; height: 132px">
+                <sc-for list="{{ vtest }}" as="v" hint-placeholder-count="6">
+                  <div style="display: flex; flex-direction: column; justify-content: flex-end; height: 100%; gap: 6px">
+                    <div style="font-family: 'Archivo', sans-serif; font-size: 13px; font-weight: 700; color: #0B3053; text-align: center; font-variant-numeric: tabular-nums">{{ v.nota }}</div>
+                    <div style="height: 74px; display: flex; align-items: flex-end">
+                      <div style="width: 100%; height: {{ v.altura }}; background: {{ v.cor }}; border-radius: 1px 1px 0 0"></div>
+                    </div>
+                    <div style="text-align: center; border-top: 1px solid #E2DDD4; padding-top: 6px">
+                      <div style="font-family: 'Archivo', sans-serif; font-size: 12px; font-weight: 700; color: #B98A4E">{{ v.nivel }}</div>
+                      <div style="font-size: 11px; color: #9AA0A5">{{ v.periodo }}</div>
+                    </div>
+                  </div>
+                </sc-for>
+              </div>
+              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-top: 18px">
+                <sc-for list="{{ inglesCards }}" as="c" hint-placeholder-count="3">
+                  <div style="border: 1px solid #E2DDD4; border-radius: 2px; padding: 13px 15px">
+                    <div style="font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: #8B9096; font-weight: 600">{{ c.rotulo }}</div>
+                    <div style="font-family: 'Archivo', sans-serif; font-size: 19px; font-weight: 700; color: #0B3053; margin-top: 5px">{{ c.valor }}</div>
+                    <div style="font-size: 12px; color: #6E7378; margin-top: 3px; line-height: 1.35">{{ c.detalhe }}</div>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </sc-if>
+        </div>
+
+        <div style="background: #fff; border: 1px solid #E2DDD4; border-radius: 3px; overflow: hidden">
+          <div onClick="{{ toggle.nucleo }}" style="display: grid; grid-template-columns: 5px minmax(0, 1fr) auto; gap: 16px; align-items: center; padding: 15px 20px 15px 0; cursor: pointer" style-hover="background: #FBFAF8">
+            <div style="width: 5px; height: 40px; background: #9E3B2C"></div>
+            <div>
+              <div style="font-family: 'Archivo', sans-serif; font-size: 17px; font-weight: 700; color: #0B3053">Núcleo de apoio e convocações</div>
+              <div style="font-size: 12.5px; color: #6E7378; margin-top: 1px">14 convocações · 5 ausências não justificadas · 3 presenças avulsas</div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 14px">
+              <span style="font-size: 10px; font-family: 'Archivo', sans-serif; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: #9E3B2C; background: #FAF0EE; border: 1px solid #EDD9D4; padding: 3px 8px; border-radius: 2px">Ausências</span>
+              <span style="font-family: 'Archivo', sans-serif; font-size: 15px; color: #B98A4E; width: 14px; text-align: center">{{ chev.nucleo }}</span>
+            </div>
+          </div>
+          <sc-if value="{{ open.nucleo }}" hint-placeholder-val="{{ false }}">
+            <div style="border-top: 1px solid #EFEBE3; padding: 18px 20px 22px">
+              <div style="display: grid; grid-template-columns: 190px repeat(3, 96px) minmax(0, 1fr); gap: 12px; padding-bottom: 7px; border-bottom: 1px solid #E2DDD4">
+                <div style="font-size: 11px; color: #8B9096">Núcleo</div>
+                <div style="font-size: 11px; color: #8B9096; text-align: center">Convocada</div>
+                <div style="font-size: 11px; color: #8B9096; text-align: center">Presente</div>
+                <div style="font-size: 11px; color: #8B9096; text-align: center">Ausente</div>
+                <div style="font-size: 11px; color: #8B9096">Observação do professor</div>
+              </div>
+              <sc-for list="{{ nucleos }}" as="n" hint-placeholder-count="4">
+                <div style="display: grid; grid-template-columns: 190px repeat(3, 96px) minmax(0, 1fr); gap: 12px; align-items: center; padding: 10px 0; border-bottom: 1px solid #F5F2EC">
+                  <div style="font-size: 13px; font-weight: 600">{{ n.nome }}</div>
+                  <div style="text-align: center; font-size: 13px; font-variant-numeric: tabular-nums">{{ n.conv }}</div>
+                  <div style="text-align: center; font-size: 13px; font-variant-numeric: tabular-nums; color: #2F6B4F; font-weight: 600">{{ n.pres }}</div>
+                  <div style="text-align: center; font-size: 13px; font-variant-numeric: tabular-nums; color: {{ n.corAus }}; font-weight: 600">{{ n.aus }}</div>
+                  <div style="font-size: 12px; color: #6E7378; line-height: 1.35">{{ n.obs }}</div>
+                </div>
+              </sc-for>
+            </div>
+          </sc-if>
+        </div>
+
+        <div style="background: #fff; border: 1px solid #E2DDD4; border-radius: 3px; overflow: hidden">
+          <div onClick="{{ toggle.enfermaria }}" style="display: grid; grid-template-columns: 5px minmax(0, 1fr) auto; gap: 16px; align-items: center; padding: 15px 20px 15px 0; cursor: pointer" style-hover="background: #FBFAF8">
+            <div style="width: 5px; height: 40px; background: #B98A4E"></div>
+            <div>
+              <div style="font-family: 'Archivo', sans-serif; font-size: 17px; font-weight: 700; color: #0B3053">Enfermaria</div>
+              <div style="font-size: 12.5px; color: #6E7378; margin-top: 1px">9 atendimentos em 2026 · 5 por cefaleia · 1 uso de broncodilatador</div>
+            </div>
+            <span style="font-family: 'Archivo', sans-serif; font-size: 15px; color: #B98A4E; width: 14px; text-align: center">{{ chev.enfermaria }}</span>
+          </div>
+          <sc-if value="{{ open.enfermaria }}" hint-placeholder-val="{{ false }}">
+            <div style="border-top: 1px solid #EFEBE3; padding: 18px 20px 22px">
+              <sc-for list="{{ enfermaria }}" as="e" hint-placeholder-count="6">
+                <div style="display: grid; grid-template-columns: 108px 176px minmax(0, 1fr) 130px; gap: 14px; align-items: center; padding: 10px 12px; border-bottom: 1px solid #F5F2EC">
+                  <div style="font-size: 12px; color: #6E7378; font-variant-numeric: tabular-nums">{{ e.data }}</div>
+                  <div style="font-size: 13px; font-weight: 600">{{ e.motivo }}</div>
+                  <div style="font-size: 12.5px; color: #6E7378">{{ e.conduta }}</div>
+                  <div style="font-size: 12px; color: {{ e.cor }}; font-weight: 600; text-align: right">{{ e.desfecho }}</div>
+                </div>
+              </sc-for>
+            </div>
+          </sc-if>
+        </div>
+
+        <div style="background: #fff; border: 1px solid #E2DDD4; border-radius: 3px; overflow: hidden">
+          <div onClick="{{ toggle.comunicacao }}" style="display: grid; grid-template-columns: 5px minmax(0, 1fr) auto; gap: 16px; align-items: center; padding: 15px 20px 15px 0; cursor: pointer" style-hover="background: #FBFAF8">
+            <div style="width: 5px; height: 40px; background: #6E7378"></div>
+            <div>
+              <div style="font-family: 'Archivo', sans-serif; font-size: 17px; font-weight: 700; color: #0B3053">Comunicação, leitura e dúvidas no Stift</div>
+              <div style="font-size: 12.5px; color: #6E7378; margin-top: 1px">58% dos comunicados lidos pela família · 23 dúvidas enviadas · 41 mensagens com a equipe</div>
+            </div>
+            <span style="font-family: 'Archivo', sans-serif; font-size: 15px; color: #B98A4E; width: 14px; text-align: center">{{ chev.comunicacao }}</span>
+          </div>
+          <sc-if value="{{ open.comunicacao }}" hint-placeholder-val="{{ false }}">
+            <div style="border-top: 1px solid #EFEBE3; padding: 18px 20px 22px; display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 30px">
+              <div>
+                <div style="font-family: 'Archivo', sans-serif; font-size: 9.5px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: #8B9096; margin-bottom: 10px">Últimos comunicados</div>
+                <sc-for list="{{ comunicados }}" as="c" hint-placeholder-count="5">
+                  <div style="display: grid; grid-template-columns: minmax(0, 1fr) 120px; gap: 12px; align-items: center; padding: 8px 0; border-bottom: 1px solid #F5F2EC">
+                    <div>
+                      <div style="font-size: 13px; font-weight: 600">{{ c.titulo }}</div>
+                      <div style="font-size: 11.5px; color: #9AA0A5">{{ c.data }}</div>
+                    </div>
+                    <div style="text-align: right; font-size: 11.5px; font-weight: 600; color: {{ c.cor }}">{{ c.status }}</div>
+                  </div>
+                </sc-for>
+              </div>
+              <div>
+                <div style="font-family: 'Archivo', sans-serif; font-size: 9.5px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: #8B9096; margin-bottom: 10px">Dúvidas no Stift por disciplina</div>
+                <sc-for list="{{ stift }}" as="s" hint-placeholder-count="5">
+                  <div style="display: grid; grid-template-columns: 132px minmax(0, 1fr) 34px; gap: 12px; align-items: center; padding: 6px 0">
+                    <div style="font-size: 12.5px">{{ s.nome }}</div>
+                    <div style="height: 8px; background: #F1EFEA; border-radius: 1px; overflow: hidden">
+                      <div style="height: 100%; width: {{ s.barra }}; background: #0B3053"></div>
+                    </div>
+                    <div style="text-align: right; font-size: 12.5px; font-weight: 600; font-variant-numeric: tabular-nums">{{ s.qtd }}</div>
+                  </div>
+                </sc-for>
+                <div style="font-size: 12px; color: #6E7378; margin-top: 12px; line-height: 1.45">Concentração de dúvidas em matemática e física coincide com as duas disciplinas em recuperação.</div>
+              </div>
+            </div>
+          </sc-if>
+        </div>
+      </div>
+
+      <div style="position: sticky; top: 76px; display: flex; flex-direction: column; gap: 14px">
+
+        <div style="background: #0B3053; border-radius: 3px; overflow: hidden; color: #fff">
+          <div style="padding: 15px 18px; border-bottom: 1px solid rgba(255,255,255,.12); display: flex; align-items: center; justify-content: space-between">
+            <div>
+              <div style="font-family: 'Archivo', sans-serif; font-size: 10.5px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: #E3C39D">Assistente Canvas ✦</div>
+              <div style="font-size: 12px; color: rgba(255,255,255,.6); margin-top: 3px">Responde apenas sobre esta estudante</div>
+            </div>
+            <div style="font-size: 10.5px; color: #E3C39D; border: 1px solid rgba(227,195,157,.4); border-radius: 2px; padding: 3px 7px">nível 4</div>
+          </div>
+          <div style="padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; max-height: 330px; overflow: auto">
+            <sc-for list="{{ mensagens }}" as="m" hint-placeholder-count="2">
+              <div style="align-self: {{ m.align }}; max-width: 92%; background: {{ m.bg }}; color: {{ m.cor }}; border: 1px solid {{ m.borda }}; border-radius: 3px; padding: 10px 12px; font-size: 12.5px; line-height: 1.5; white-space: pre-line">{{ m.txt }}</div>
+            </sc-for>
+          </div>
+          <div style="padding: 0 16px 14px; display: flex; flex-direction: column; gap: 7px">
+            <div style="font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; color: rgba(227,195,157,.8); font-weight: 600">Sugestões</div>
+            <sc-for list="{{ sugestoes }}" as="s" hint-placeholder-count="3">
+              <div onClick="{{ s.perguntar }}" style="font-size: 12.5px; color: #fff; background: rgba(255,255,255,.07); border: 1px solid rgba(227,195,157,.25); border-radius: 2px; padding: 9px 11px; cursor: pointer; line-height: 1.35" style-hover="background: rgba(227,195,157,.16)">{{ s.q }}</div>
+            </sc-for>
+            <div style="display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; margin-top: 4px">
+              <input value="{{ rascunho }}" onChange="{{ digitar }}" placeholder="Pergunte sobre a Marina…" style="background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.18); border-radius: 2px; padding: 10px 12px; font-size: 12.5px; color: #fff; font-family: 'Source Sans 3', sans-serif; outline: none; min-width: 0" />
+              <button onClick="{{ enviar }}" style="background: #E3C39D; color: #0B3053; border: 0; border-radius: 2px; padding: 10px 14px; font-family: 'Archivo', sans-serif; font-size: 12.5px; font-weight: 700; cursor: pointer">Enviar</button>
+            </div>
+          </div>
+        </div>
+
+        <div style="background: #fff; border: 1px solid #E2DDD4; border-radius: 3px; overflow: hidden">
+          <div style="padding: 13px 16px; border-bottom: 1px solid #EFEBE3; display: flex; align-items: center; justify-content: space-between">
+            <div style="font-family: 'Archivo', sans-serif; font-size: 10.5px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: #0B3053">Pontos de atenção ✦</div>
+            <div style="font-size: 11px; color: #9AA0A5">gerado hoje</div>
+          </div>
+          <sc-for list="{{ pontosAtencao }}" as="p" hint-placeholder-count="4">
+            <div style="padding: 12px 16px; border-bottom: 1px solid #F5F2EC; display: grid; grid-template-columns: 8px minmax(0, 1fr); gap: 11px; align-items: start">
+              <span style="width: 7px; height: 7px; border-radius: 50%; background: {{ p.cor }}; margin-top: 6px"></span>
+              <div>
+                <div style="font-size: 12.5px; font-weight: 600; line-height: 1.35">{{ p.titulo }}</div>
+                <div style="font-size: 12px; color: #6E7378; line-height: 1.4; margin-top: 2px">{{ p.detalhe }}</div>
+                <div style="font-size: 11px; color: #B98A4E; font-weight: 600; margin-top: 4px">{{ p.fonte }}</div>
+              </div>
+            </div>
+          </sc-for>
+          <div style="padding: 12px 16px; display: flex; flex-direction: column; gap: 8px">
+            <button onClick="{{ resumirAtas }}" style="background: #F7F5F1; border: 1px solid #E6DCCC; color: #0B3053; border-radius: 2px; padding: 11px 14px; font-family: 'Archivo', sans-serif; font-size: 12.5px; font-weight: 600; cursor: pointer; text-align: left" style-hover="background: #F2EDE4">{{ labelResumo }}</button>
+            <button onClick="{{ verHistorico }}" style="background: #F7F5F1; border: 1px solid #E6DCCC; color: #0B3053; border-radius: 2px; padding: 11px 14px; font-family: 'Archivo', sans-serif; font-size: 12.5px; font-weight: 600; cursor: pointer; text-align: left" style-hover="background: #F2EDE4">{{ labelHistorico }}</button>
+          </div>
+        </div>
+
+        <div style="background: #fff; border: 1px solid #E2DDD4; border-radius: 3px; padding: 14px 16px">
+          <div style="font-family: 'Archivo', sans-serif; font-size: 10.5px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: #0B3053; margin-bottom: 10px">Procedência dos dados</div>
+          <sc-for list="{{ fontes }}" as="f" hint-placeholder-count="5">
+            <div style="display: flex; align-items: center; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid #F5F2EC">
+              <span style="font-size: 12.5px">{{ f.nome }}</span>
+              <span style="font-size: 11.5px; color: {{ f.cor }}; font-weight: 600">{{ f.status }}</span>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <sc-if value="{{ modal.aberto }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ fecharModal }}" style="position: fixed; inset: 0; background: rgba(11,26,40,.55); z-index: 60; display: flex; align-items: flex-start; justify-content: center; padding: 60px 20px; overflow: auto">
+      <div style="background: #fff; border-radius: 3px; max-width: 760px; width: 100%; box-shadow: 0 30px 80px rgba(0,0,0,.3)">
+        <div style="background: #0B3053; color: #fff; padding: 18px 24px; display: flex; align-items: flex-start; justify-content: space-between; gap: 20px">
+          <div>
+            <div style="font-family: 'Archivo', sans-serif; font-size: 10px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: #E3C39D">{{ modal.tag }}</div>
+            <div style="font-family: 'Archivo', sans-serif; font-size: 21px; font-weight: 700; margin-top: 6px; line-height: 1.15">{{ modal.titulo }}</div>
+            <div style="font-size: 12.5px; color: rgba(255,255,255,.65); margin-top: 4px">{{ modal.sub }}</div>
+          </div>
+          <div onClick="{{ fecharModal }}" style="cursor: pointer; color: #E3C39D; font-size: 20px; line-height: 1; padding: 2px 4px">×</div>
+        </div>
+        <div style="padding: 22px 24px 24px">
+          <sc-if value="{{ modal.carregando }}" hint-placeholder-val="{{ false }}">
+            <div style="padding: 30px 0; text-align: center; color: #6E7378; font-size: 13px">Lendo registros e consolidando… ✦</div>
+          </sc-if>
+          <sc-for list="{{ modal.linhas }}" as="l" hint-placeholder-count="3">
+            <div style="display: grid; grid-template-columns: 168px minmax(0, 1fr); gap: 16px; padding: 8px 0; border-bottom: 1px solid #F5F2EC">
+              <div style="font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; color: #8B9096; font-weight: 600">{{ l.rotulo }}</div>
+              <div style="font-size: 13.5px; color: #172026; line-height: 1.45">{{ l.valor }}</div>
+            </div>
+          </sc-for>
+          <sc-for list="{{ modal.paragrafos }}" as="p" hint-placeholder-count="3">
+            <p style="font-size: 13.5px; line-height: 1.6; color: #2B3237; margin: 12px 0 0">{{ p }}</p>
+          </sc-for>
+          <sc-if value="{{ modal.temTabela }}" hint-placeholder-val="{{ false }}">
+            <div style="margin-top: 18px; border: 1px solid #E2DDD4; border-radius: 2px; overflow: hidden">
+              <div style="display: grid; grid-template-columns: 90px 96px minmax(0, 1fr); gap: 12px; background: #F7F5F1; padding: 8px 14px; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: #8B9096; font-weight: 600">
+                <div>Ano</div><div>Média final</div><div>Marcos do ano</div>
+              </div>
+              <sc-for list="{{ modal.tabela }}" as="t" hint-placeholder-count="6">
+                <div style="display: grid; grid-template-columns: 90px 96px minmax(0, 1fr); gap: 12px; padding: 9px 14px; border-top: 1px solid #F0EDE7; align-items: center">
+                  <div style="font-family: 'Archivo', sans-serif; font-size: 13px; font-weight: 700; color: #0B3053">{{ t.ano }}</div>
+                  <div style="font-family: 'Archivo', sans-serif; font-size: 14px; font-weight: 700; color: {{ t.cor }}; font-variant-numeric: tabular-nums">{{ t.media }}</div>
+                  <div style="font-size: 12.5px; color: #4C5257; line-height: 1.4">{{ t.marco }}</div>
+                </div>
+              </sc-for>
+            </div>
+          </sc-if>
+          <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 22px">
+            <button onClick="{{ fecharModal }}" style="background: #fff; border: 1px solid #C9D2DB; color: #0B3053; border-radius: 2px; padding: 10px 18px; font-family: 'Archivo', sans-serif; font-size: 12.5px; font-weight: 600; cursor: pointer">Fechar</button>
+            <button onClick="{{ fecharModal }}" style="background: #0B3053; border: 0; color: #fff; border-radius: 2px; padding: 10px 18px; font-family: 'Archivo', sans-serif; font-size: 12.5px; font-weight: 600; cursor: pointer">{{ modal.acao }}</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ printOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position: fixed; inset: 0; background: rgba(11,26,40,.55); z-index: 70; display: flex; align-items: flex-start; justify-content: center; padding: 50px 20px; overflow: auto">
+      <div style="background: #fff; border-radius: 3px; max-width: 660px; width: 100%; box-shadow: 0 30px 80px rgba(0,0,0,.3)">
+        <div style="background: #0B3053; color: #fff; padding: 18px 24px">
+          <div style="font-family: 'Archivo', sans-serif; font-size: 10px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: #E3C39D">Montar impressão</div>
+          <div style="font-family: 'Archivo', sans-serif; font-size: 20px; font-weight: 700; margin-top: 6px">Selecione o que entra no documento</div>
+        </div>
+        <div style="padding: 20px 24px 24px">
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px 20px">
+            <sc-for list="{{ printSecs }}" as="s" hint-placeholder-count="12">
+              <div onClick="{{ s.alternar }}" style="display: grid; grid-template-columns: 18px minmax(0, 1fr); gap: 10px; align-items: center; padding: 7px 0; cursor: pointer">
+                <div style="width: 16px; height: 16px; border: 1px solid {{ s.borda }}; background: {{ s.bg }}; color: #fff; border-radius: 2px; display: grid; place-items: center; font-size: 11px; line-height: 1">{{ s.marca }}</div>
+                <div style="font-size: 13px">{{ s.nome }}</div>
+              </div>
+            </sc-for>
+          </div>
+          <div style="margin-top: 18px; padding-top: 16px; border-top: 1px solid #EFEBE3">
+            <div style="font-family: 'Archivo', sans-serif; font-size: 9.5px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: #8B9096; margin-bottom: 8px">Campos de assinatura</div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px 20px">
+              <sc-for list="{{ printAssin }}" as="s" hint-placeholder-count="3">
+                <div onClick="{{ s.alternar }}" style="display: grid; grid-template-columns: 18px minmax(0, 1fr); gap: 10px; align-items: center; padding: 7px 0; cursor: pointer">
+                  <div style="width: 16px; height: 16px; border: 1px solid {{ s.borda }}; background: {{ s.bg }}; color: #fff; border-radius: 2px; display: grid; place-items: center; font-size: 11px; line-height: 1">{{ s.marca }}</div>
+                  <div style="font-size: 13px">{{ s.nome }}</div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 22px">
+            <div style="font-size: 12px; color: #9AA0A5">{{ printResumo }}</div>
+            <div style="display: flex; gap: 10px">
+              <button onClick="{{ cancelarImpressao }}" style="background: #fff; border: 1px solid #C9D2DB; color: #0B3053; border-radius: 2px; padding: 11px 18px; font-family: 'Archivo', sans-serif; font-size: 12.5px; font-weight: 600; cursor: pointer">Cancelar</button>
+              <button onClick="{{ gerarDocumento }}" style="background: #0B3053; border: 0; color: #fff; border-radius: 2px; padding: 11px 20px; font-family: 'Archivo', sans-serif; font-size: 12.5px; font-weight: 700; cursor: pointer">Gerar documento</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ buscaOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position: fixed; inset: 0; background: rgba(11,26,40,.55); z-index: 70; display: flex; align-items: flex-start; justify-content: center; padding: 80px 20px; overflow: auto">
+      <div style="background: #fff; border-radius: 3px; max-width: 620px; width: 100%; box-shadow: 0 30px 80px rgba(0,0,0,.3); overflow: hidden">
+        <div style="padding: 16px 20px; border-bottom: 1px solid #EFEBE3; display: flex; align-items: center; gap: 12px">
+          <span style="font-size: 13px; color: #9AA0A5">Buscar estudante</span>
+          <input value="{{ buscaTermo }}" onChange="{{ digitarBusca }}" placeholder="Nome, matrícula ou turma" style="flex: 1; border: 0; outline: none; font-size: 15px; font-family: 'Source Sans 3', sans-serif; color: #172026" />
+          <div onClick="{{ fecharBusca }}" style="cursor: pointer; color: #8B9096; font-size: 18px">×</div>
+        </div>
+        <sc-for list="{{ resultadosBusca }}" as="r" hint-placeholder-count="4">
+          <div onClick="{{ r.abrir }}" style="display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 11px 20px; border-bottom: 1px solid #F5F2EC; cursor: pointer; background: {{ r.bg }}" style-hover="background: #FBFAF8">
+            <div style="width: 30px; height: 30px; border-radius: 2px; background: #0B3053; color: #E3C39D; display: grid; place-items: center; font-family: 'Archivo', sans-serif; font-size: 11px; font-weight: 700">{{ r.ini }}</div>
+            <div>
+              <div style="font-size: 13.5px; font-weight: 600">{{ r.nome }}</div>
+              <div style="font-size: 11.5px; color: #8B9096">{{ r.turma }} · RM {{ r.rm }}</div>
+            </div>
+            <div style="font-size: 11.5px; color: {{ r.cor }}; font-weight: 600">{{ r.marca }}</div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ fotoOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ fecharFoto }}" style="position: fixed; inset: 0; background: rgba(11,26,40,.75); z-index: 80; display: grid; place-items: center; padding: 40px">
+      <div style="background: #fff; padding: 16px; border-radius: 3px; text-align: center">
+        <div style="width: 300px; height: 380px; background: #0B3053; color: #E3C39D; display: grid; place-items: center; font-family: 'Archivo', sans-serif; font-size: 84px; font-weight: 700">MA</div>
+        <div style="font-size: 12.5px; color: #6E7378; margin-top: 12px">Foto oficial 2026 · sincronizada do Drive em 03/03/2026</div>
+      </div>
+    </div>
+  </sc-if>
+</div>
+</sc-if>
+
+<sc-if value="{{ isImpressao }}" hint-placeholder-val="{{ false }}">
+<div>
+  <div class="no-print" style="position: fixed; top: 0; left: 0; right: 0; height: 56px; background: #172026; color: #fff; display: flex; align-items: center; justify-content: space-between; padding: 0 24px; z-index: 50">
+    <div style="display: flex; align-items: center; gap: 18px">
+      <button onClick="{{ voltarPainel }}" style="background: transparent; color: #E3C39D; border: 1px solid rgba(227,195,157,.4); border-radius: 2px; padding: 8px 16px; font-family: 'Archivo', sans-serif; font-size: 12.5px; font-weight: 600; cursor: pointer" style-hover="background: rgba(227,195,157,.12)">← Voltar à ficha</button>
+      <div style="font-size: 13px; color: rgba(255,255,255,.6)">{{ printResumo }}</div>
+    </div>
+    <button onClick="{{ imprimir }}" style="background: #E3C39D; color: #172026; border: 0; border-radius: 2px; padding: 10px 22px; font-family: 'Archivo', sans-serif; font-size: 13px; font-weight: 700; cursor: pointer">Imprimir / Salvar PDF</button>
+  </div>
+  <div style="padding-top: 56px">
+    <doc-page margin="0.7in">
+      <div style="display: flex; align-items: flex-start; justify-content: space-between; padding-bottom: 14px; border-bottom: 2px solid #0B3053">
+        <img src="assets/logo-liceu-navy.png" alt="Liceu Jardim" style="height: 38px; width: auto; display: block" />
+        <div style="text-align: right; font-size: 9.5px; color: #55595E; line-height: 1.5">
+          <div style="font-weight: 700; color: #0B3053">Liceu Jardim · Educação Básica</div>
+          <div>Documento interno de acompanhamento pedagógico</div>
+          <div>Emitido em 13/08/2026 por Roberto Salgueiro — Direção Geral</div>
+        </div>
+      </div>
+      <div style="text-align: center; margin: 22px 0 18px">
+        <h1 style="font-family: 'Archivo', sans-serif; font-size: 19px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: #0B3053; margin: 0">Relatório individual do estudante</h1>
+        <div style="font-size: 11px; color: #8B9096; letter-spacing: .1em; text-transform: uppercase; margin-top: 5px">Marina Sartori Albuquerque · 1.ª série B · Ensino Médio · 2026</div>
+      </div>
+      <div style="border: 1px solid #C9D2DB; border-radius: 2px; margin-bottom: 20px">
+        <div style="background: #0B3053; color: #fff; padding: 6px 12px; font-family: 'Archivo', sans-serif; font-size: 9px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase">Identificação</div>
+        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; background: #E4EAF0">
+          <sc-for list="{{ identificacao }}" as="d" hint-placeholder-count="8">
+            <div style="background: #fff; padding: 8px 12px">
+              <div style="font-size: 8px; letter-spacing: .1em; text-transform: uppercase; color: #8B9096; font-weight: 600">{{ d.rotulo }}</div>
+              <div style="font-size: 11px; font-weight: 600; margin-top: 2px">{{ d.valor }}</div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+      <sc-for list="{{ printBlocos }}" as="b" hint-placeholder-count="4">
+        <div style="margin-bottom: 20px; break-inside: avoid">
+          <div style="font-family: 'Archivo', sans-serif; font-size: 10px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: #0B3053; padding-bottom: 6px; border-bottom: 1px solid #0B3053">{{ b.titulo }}</div>
+          <div style="font-size: 9.5px; color: #6E7378; margin-top: 5px">{{ b.sub }}</div>
+          <sc-for list="{{ b.linhas }}" as="l" hint-placeholder-count="4">
+            <div style="display: grid; grid-template-columns: 200px minmax(0, 1fr) 76px; gap: 12px; padding: 5px 0; border-bottom: 1px solid #EFEBE3; align-items: baseline">
+              <div style="font-size: 10.5px; font-weight: 600">{{ l.esq }}</div>
+              <div style="font-size: 10px; color: #4C5257; line-height: 1.4">{{ l.meio }}</div>
+              <div style="font-size: 10.5px; font-weight: 700; text-align: right; font-variant-numeric: tabular-nums; color: #0B3053">{{ l.dir }}</div>
+            </div>
+          </sc-for>
+        </div>
+      </sc-for>
+      <sc-if value="{{ temAssinaturas }}" hint-placeholder-val="{{ false }}">
+        <div style="margin-top: 34px; break-inside: avoid">
+          <div style="font-size: 10px; color: #2B3237; text-align: center; margin-bottom: 30px">São Paulo, 13 de agosto de 2026.</div>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 40px">
+            <sc-for list="{{ assinaturas }}" as="a" hint-placeholder-count="2">
+              <div style="text-align: center; border-top: 1px solid #172026; padding-top: 5px">
+                <div style="font-size: 10px; font-weight: 700">{{ a.nome }}</div>
+                <div style="font-size: 8.5px; color: #55595E">{{ a.papel }}</div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </sc-if>
+      <div style="margin-top: 26px; padding-top: 10px; border-top: 1px solid #E2DDD4; font-size: 8px; color: #8B9096; letter-spacing: .05em">Documento de circulação interna. Contém dados de saúde e de atendimento educacional especializado — a impressão deve ser controlada conforme a política de privacidade do Liceu Jardim.</div>
+    </doc-page>
+  </div>
+</div>
+</sc-if>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1600,&quot;height&quot;:1100}}">
+class Component extends DCLogic {
+  state = {
+    view: "painel",
+    open: { notas: true, faltas: true, ocorrencias: true, reunioes: true, saude: false, extra: false, olimpiadas: false, simulados: false, ingles: false, nucleo: false, enfermaria: false, comunicacao: false },
+    bim: 3,
+    discAberta: null,
+    filtro: null,
+    modal: null,
+    chat: [{ who: "ia", txt: "Tenho acesso a notas, frequência, ocorrências, atas de entrevista, saúde e atividades da Marina em 2026, além do histórico desde 2019. O que você quer saber?" }],
+    rascunho: "",
+    busca: false,
+    buscaTermo: "Marina",
+    foto: false,
+    printOpen: false,
+    printSel: { notas: true, faltas: true, ocorrencias: true, reunioes: false, saude: false, extra: true, olimpiadas: true, simulados: false, ingles: false, nucleo: true, enfermaria: false, comunicacao: false },
+    assin: { responsavel: true, gestor: true, coord: false },
+    carregandoResumo: false,
+    carregandoHist: false
+  };
+
+  cores = { navy: "#0B3053", gold: "#B98A4E", bege: "#E3C39D", red: "#9E3B2C", green: "#2F6B4F", gray: "#6E7378" };
+
+  corNota(n) { return n < 6 ? "#9E3B2C" : n < 7 ? "#B98A4E" : "#2F6B4F"; }
+
+  base() {
+    const d = [
+      ["Língua Portuguesa", "Cláudia Renner", [7.2, 6.4, 6.8, 7.0], 6.9, 3],
+      ["Redação", "Cláudia Renner", [6.5, 6.0, 7.2, 7.4], 7.1, 2],
+      ["Matemática", "Eduardo Prates", [5.8, 4.9, 5.2, 5.6], 6.7, 7],
+      ["Física", "Eduardo Prates", [5.4, 5.0, 4.8, 5.9], 6.4, 5],
+      ["Química", "Talita Bonfim", [6.8, 6.2, 6.6, 6.9], 6.8, 3],
+      ["Biologia", "Talita Bonfim", [8.1, 7.6, 8.4, 8.0], 7.5, 2],
+      ["História", "Marcos Vidal", [8.6, 8.2, 8.8, 9.0], 7.4, 1],
+      ["Geografia", "Marcos Vidal", [7.8, 7.4, 7.0, 7.6], 7.2, 2],
+      ["Filosofia", "Iara Coutinho", [8.2, 7.9, 8.6, 8.4], 7.8, 1],
+      ["Sociologia", "Iara Coutinho", [8.0, 8.4, 8.2, 8.8], 7.9, 1],
+      ["Inglês — IEP", "Sarah Whitman", [7.6, 7.2, 7.8, 8.0], 7.7, 3],
+      ["Educação Física", "Rafael Tomé", [9.0, 8.5, 6.2, 7.0], 8.6, 2]
+    ];
+    return d;
+  }
+
+  avaliacoes(nota, bim) {
+    const dt = ["12/03", "26/03", "09/04", "16/04"];
+    const dt2 = { 0: ["10/02", "05/03", "19/03", "27/03"], 1: ["14/04", "08/05", "22/05", "29/05"], 2: ["16/06", "05/07", "24/07", "31/07"], 3: ["04/08", "11/08", "—", "—"] };
+    const datas = dt2[bim] || dt;
+    const defs = [["Prova mensal", 2], ["Prova bimestral", 4], ["Trabalho em grupo", 2], ["Participação e tarefas", 2]];
+    const deltas = [-0.6, -0.9, 1.1, 0.6];
+    return defs.map((f, i) => {
+      const v = bim === 3 && i > 1 ? null : Math.max(0, Math.min(10, nota + deltas[i]));
+      return { nome: f[0], peso: f[1], data: datas[i], nota: v === null ? "—" : v.toFixed(1).replace(".", ","), cor: v === null ? "#B9BDBF" : this.corNota(v) };
+    });
+  }
+
+  ocorrenciasBase() {
+    return [
+      { data: "28/07/2026", tipo: "Ocorrência", cat: "disciplinar", titulo: "Terceiro atraso consecutivo no 1.º horário", autor: "Coordenação de Ensino Médio · Ana Marques", corpo: ["Terceiro registro de atraso superior a 15 minutos em duas semanas. A estudante relatou dificuldade de sono e uso de medicação nova.", "Encaminhamento: conversa com a mãe por telefone no mesmo dia e combinado ajuste de horário de saída de casa. Reincidência gera convocação formal."] },
+      { data: "14/07/2026", tipo: "Elogio", cat: "elogio", titulo: "Destaque na apresentação do projeto de História", autor: "Marcos Vidal · História", corpo: ["Liderou o grupo na apresentação sobre memória urbana, com pesquisa de campo própria e entrevistas gravadas.", "Registro enviado à família via Layers."] },
+      { data: "02/07/2026", tipo: "Pedagógica", cat: "pedagogica", titulo: "Não entrega de lista de exercícios de Matemática", autor: "Eduardo Prates · Matemática", corpo: ["Segunda não entrega no bimestre. Aluna com adaptação de prazo prevista no plano de NEE — prazo estendido concedido até 09/07.", "Convocada para o núcleo de apoio de matemática às quartas."] },
+      { data: "19/06/2026", tipo: "Ocorrência", cat: "disciplinar", titulo: "Uso de celular durante avaliação de Física", autor: "Eduardo Prates · Física", corpo: ["Aparelho recolhido e devolvido à mãe na saída. Avaliação mantida, sem anulação, conforme decisão da coordenação.", "Registro assinado pela estudante."] },
+      { data: "28/05/2026", tipo: "Saúde", cat: "saude", titulo: "Crise de ansiedade antes da prova bimestral", autor: "Enfermaria · Denise Rocha", corpo: ["Atendida na enfermaria, permaneceu 40 minutos em repouso e realizou a prova em sala separada.", "Comunicado ao serviço de orientação educacional."] },
+      { data: "11/05/2026", tipo: "Elogio", cat: "elogio", titulo: "Voluntariado na Feira Cultural", autor: "Coordenação Cultural · Bianca Sales", corpo: ["Atuou como monitora do espaço de leitura durante os dois dias da feira."] },
+      { data: "22/04/2026", tipo: "Ocorrência", cat: "disciplinar", titulo: "Saída da sala sem autorização", autor: "Inspetoria · Jonas Freire", corpo: ["Ausentou-se da aula de Química por 20 minutos. Localizada na biblioteca."] },
+      { data: "08/04/2026", tipo: "Pedagógica", cat: "pedagogica", titulo: "Recuperação paralela de Matemática — 1.º bimestre", autor: "Coordenação de Ensino Médio", corpo: ["Média 5,8 no bimestre. Plano de recuperação paralela iniciado com lista dirigida e atendimento no núcleo."] },
+      { data: "25/03/2026", tipo: "Elogio", cat: "elogio", titulo: "Melhor redação da turma no simulado", autor: "Cláudia Renner · Redação", corpo: ["Nota 880 na competência 5, texto usado como modelo em aula."] },
+      { data: "12/03/2026", tipo: "Saúde", cat: "saude", titulo: "Reforço do protocolo de alergia alimentar", autor: "Enfermaria · Denise Rocha", corpo: ["Revisão do protocolo com a professora de Educação Física e a equipe da cantina. Adrenalina autoinjetável conferida e válida até 11/2027."] },
+      { data: "04/03/2026", tipo: "Elogio", cat: "elogio", titulo: "Assiduidade no núcleo de apoio de Química", autor: "Talita Bonfim · Química", corpo: ["Presença voluntária em quatro encontros seguidos."] }
+    ];
+  }
+
+  reunioesBase() {
+    return [
+      { data: "04/08/2026", tipo: "Entrevista com a família", duracao: "50 min", titulo: "Devolutiva do 2.º bimestre e plano de recuperação", participantes: "Mãe (Renata Sartori), coordenação, prof. Eduardo Prates", corpo: ["A mãe relata que a queda em exatas coincidiu com a troca de medicação em maio, acompanhada por neurologista. Solicita que as avaliações de matemática sejam aplicadas no primeiro horário.", "Coordenação propõe: presença obrigatória no núcleo de apoio de matemática (quartas), prova em sala reduzida e devolutiva mensal por telefone.", "A família concorda e pede que o pai também receba os comunicados — atualmente cadastrado apenas como responsável financeiro."] },
+      { data: "12/05/2026", tipo: "Entrevista com a família", duracao: "1 h 10 min", titulo: "Revisão do contraturno e carga de atividades", participantes: "Mãe, pai (por videochamada), coordenação, orientação educacional", corpo: ["Os responsáveis divergem sobre a permanência no After School às quintas. A mãe entende que o contraturno organiza a rotina; o pai avalia excesso de carga.", "Decisão: manter terças e quintas até o fim do 2.º bimestre, com reavaliação em agosto.", "Registrada a orientação de que apenas a mãe e a van Rota 4 estão autorizadas a retirar a estudante, conforme documento em cartório de 2024."] },
+      { data: "26/03/2026", tipo: "Reunião pedagógica interna", duracao: "35 min", titulo: "Conselho de classe extraordinário — 1.ª série B", participantes: "Coordenação, 6 professores, orientação educacional", corpo: ["Discutida a implementação das adaptações do plano de NEE em avaliações de exatas. Três professores relatam que não haviam recebido o plano.", "Ação: reenvio do plano a todos os professores e checagem semanal pela coordenação."] },
+      { data: "05/03/2026", tipo: "Entrevista com a família", duracao: "40 min", titulo: "Acolhimento de início de Ensino Médio", participantes: "Mãe, coordenação, orientação educacional", corpo: ["Apresentado o plano de adaptações para o Ensino Médio: tempo estendido de 25%, provas em sala reduzida, material com fonte ampliada e leitura de enunciados quando solicitado.", "A família entrega laudo atualizado de TDAH e dislexia (fev/2026) e o relatório da terapeuta ocupacional."] },
+      { data: "18/02/2026", tipo: "Reunião com serviço de saúde", duracao: "30 min", titulo: "Protocolo de alergia grave e asma", participantes: "Mãe, enfermaria, coordenação, cantina", corpo: ["Definido protocolo de emergência para exposição a amendoim e castanhas, com adrenalina autoinjetável na enfermaria e réplica na sala da coordenação.", "Cantina orientada a não servir produtos com traços; bandeja identificada."] }
+    ];
+  }
+
+  renderVals() {
+    const st = this.state;
+    const seccoes = [
+      ["notas", "Notas e desempenho"], ["faltas", "Faltas e frequência"], ["ocorrencias", "Ocorrências e elogios"],
+      ["reunioes", "Reuniões e entrevistas"], ["saude", "Saúde, NEE e adaptações"], ["extra", "Extracurriculares"],
+      ["olimpiadas", "Olimpíadas e premiações"], ["simulados", "Simulados e redação"], ["ingles", "Inglês e V-Test"],
+      ["nucleo", "Núcleo de apoio"], ["enfermaria", "Enfermaria"], ["comunicacao", "Comunicação e Stift"]
+    ];
+    const toggle = {}, chev = {}, open = {};
+    seccoes.forEach(([k]) => {
+      open[k] = !!st.open[k];
+      chev[k] = st.open[k] ? "▾" : "▸";
+      toggle[k] = () => this.setState(s => ({ open: Object.assign({}, s.open, { [k]: !s.open[k] }) }));
+    });
+    const setAll = v => this.setState(s => {
+      const o = {}; seccoes.forEach(([k]) => o[k] = v); return { open: o };
+    });
+
+    const bimNomes = ["1.º bimestre", "2.º bimestre", "3.º bimestre", "4.º bim. (parcial)"];
+    const bimTabs = bimNomes.map((r, i) => ({
+      rotulo: r, bg: st.bim === i ? "#0B3053" : "#fff", cor: st.bim === i ? "#fff" : "#4C5257",
+      sel: () => this.setState({ bim: i, discAberta: null })
+    }));
+
+    const disciplinas = this.base().map((d, i) => {
+      const n = d[2][st.bim];
+      const situacao = n < 6 ? "Recuperação" : n < 7 ? "Atenção" : "Regular";
+      return {
+        nome: d[0], prof: d[1], nota: n.toFixed(1).replace(".", ","), turma: d[3].toFixed(1).replace(".", ","),
+        faltas: d[4], cor: this.corNota(n), situacao,
+        chev: st.discAberta === i ? "▾" : "▸",
+        aberto: st.discAberta === i,
+        alternar: () => this.setState(s => ({ discAberta: s.discAberta === i ? null : i })),
+        avaliacoes: this.avaliacoes(n, st.bim),
+        parecer: n < 6
+          ? "Adaptações do plano de NEE aplicadas: tempo estendido e prova em sala reduzida. Convocada para o núcleo de apoio."
+          : "Desempenho compatível com a média da turma; participação regular nas atividades do bimestre."
+      };
+    });
+
+    const ocorTodas = this.ocorrenciasBase();
+    const tiposDef = [["Elogios", "elogio", "#2F6B4F"], ["Disciplinares", "disciplinar", "#9E3B2C"], ["Pedagógicas", "pedagogica", "#B98A4E"], ["Saúde", "saude", "#0B3053"], ["Reuniões", "reuniao", "#6E7378"]];
+    const tiposOcorrencia = tiposDef.map(t => ({
+      nome: t[0], cor: t[2],
+      qtd: t[1] === "reuniao" ? 5 : ocorTodas.filter(o => o.cat === t[1]).length,
+      bg: st.filtro === t[1] ? "#F4F2ED" : "#fff",
+      filtrar: () => this.setState(s => ({ filtro: s.filtro === t[1] ? null : t[1] }))
+    }));
+    const paleta = { elogio: ["#2F6B4F", "#EEF5F1", "#D3E5DA"], disciplinar: ["#9E3B2C", "#FAF0EE", "#EDD9D4"], pedagogica: ["#B98A4E", "#F9F5EE", "#EBDCC6"], saude: ["#0B3053", "#EEF3F8", "#D5DEE6"] };
+    const abrirModal = m => this.setState({ modal: m });
+    const ocorrencias = ocorTodas.filter(o => !st.filtro || o.cat === st.filtro).map(o => ({
+      data: o.data, tipo: o.tipo, titulo: o.titulo, autor: o.autor,
+      cor: paleta[o.cat][0], bg: paleta[o.cat][1], borda: paleta[o.cat][2],
+      abrir: () => abrirModal({ tag: "Registro de ocorrência · Sophia", titulo: o.titulo, sub: o.data + " · " + o.tipo, linhas: [{ rotulo: "Registrado por", valor: o.autor }, { rotulo: "Ciência da família", valor: "Sim — via Layers, lido em 24 h" }, { rotulo: "Nível de acesso", valor: "4 — direção, coordenação e orientação" }], paragrafos: o.corpo, acao: "Registrar ciência" })
+    }));
+
+    const reunioes = this.reunioesBase().map(r => ({
+      data: r.data, tipo: r.tipo, duracao: r.duracao, titulo: r.titulo, participantes: r.participantes,
+      abrir: () => abrirModal({ tag: "Ata de reunião · registro restrito", titulo: r.titulo, sub: r.data + " · " + r.tipo + " · " + r.duracao, linhas: [{ rotulo: "Participantes", valor: r.participantes }, { rotulo: "Redigida por", valor: "Ana Marques — Coordenação de Ensino Médio" }, { rotulo: "Visibilidade", valor: "Não exibida à família; não exportável do Sophia" }], paragrafos: r.corpo, acao: "Marcar como revisada" })
+    }));
+
+    const resumoAtas = () => {
+      abrirModal({ tag: "Resumo gerado por IA ✦", titulo: "Síntese das 5 reuniões de 2026", sub: "Consolidando atas de fev a ago · fontes: Sophia (entrevistas) e registros internos", carregando: true, paragrafos: [], acao: "Salvar no dossiê" });
+      this.setState({ carregandoResumo: true });
+      setTimeout(() => this.setState({
+        carregandoResumo: false,
+        modal: {
+          tag: "Resumo gerado por IA ✦", titulo: "Síntese das 5 reuniões de 2026", sub: "5 atas · 3 h 45 min de encontros · última em 04/08/2026",
+          linhas: [{ rotulo: "Tema dominante", valor: "Desempenho em exatas e aplicação das adaptações de NEE" }, { rotulo: "Combinados em aberto", valor: "3 — reavaliação do contraturno, cadastro do pai nos comunicados, devolutiva mensal" }, { rotulo: "Divergência registrada", valor: "Permanência no After School (mãe favorável, pai contrário)" }],
+          paragrafos: [
+            "Fio condutor: as cinco reuniões giram em torno da mesma tensão — a Marina tem desempenho forte em humanas e queda persistente em matemática e física, e a família atribui a queda ao ajuste de medicação feito em maio, acompanhado por neurologista.",
+            "As adaptações previstas no plano de NEE foram acordadas em março, mas o conselho extraordinário de 26/03 revelou que três professores não as havia recebido. A coordenação assumiu a checagem semanal; nas atas seguintes não há novo registro de falha.",
+            "Há um ponto sensível de guarda: apenas a mãe e a van Rota 4 estão autorizadas a retirar a estudante, conforme documento de 2024 citado na ata de 12/05. O pai participa das decisões pedagógicas por videochamada e pediu inclusão nos comunicados — pendência ainda não executada.",
+            "Recomendação da síntese: consolidar os três combinados em aberto em um único plano com responsável e prazo, e levar à próxima entrevista (21/08) a decisão sobre o contraturno, hoje o único ponto de divergência explícita entre os responsáveis."
+          ],
+          acao: "Salvar no dossiê"
+        }
+      }), 1400);
+    };
+
+    const historico = () => {
+      abrirModal({ tag: "Análise de histórico ✦", titulo: "Trajetória 2019 → 2026", sub: "Consolidando notas, frequência e registros de sete anos", carregando: true, paragrafos: [], acao: "Exportar análise" });
+      this.setState({ carregandoHist: true });
+      setTimeout(() => this.setState({
+        carregandoHist: false,
+        modal: {
+          tag: "Análise de histórico ✦", titulo: "Trajetória 2019 → 2026", sub: "7 anos no Liceu Jardim · média geral 7,4 · frequência média 92%",
+          paragrafos: [
+            "A Marina entra no Liceu no 5.º ano com médias altas e frequência praticamente integral. O primeiro ponto de inflexão é 2023 (8.º ano), quando a média de matemática cai de 8,1 para 6,3 — mesmo ano do primeiro encaminhamento para avaliação diagnóstica.",
+            "Depois do laudo de 2024 e do início das adaptações, humanas e biológicas se recuperam e se mantêm acima de 8,0. Exatas, porém, seguem em declínio lento: 6,3 (2024) → 5,9 (2025) → 5,4 (2026). O padrão é consistente e não parece episódico.",
+            "A frequência acompanha esse movimento com atraso de um ano: 97% em 2024, 93% em 2025 e 87,4% em 2026, com concentração de faltas no primeiro horário — o mesmo horário em que estão três das quatro aulas semanais de matemática.",
+            "Leitura sugerida: o risco não é de aprovação, é de escolha de itinerário. Se o cenário atual persistir, a estudante chega à 2.ª série com defasagem em exatas suficiente para restringir opções que ela demonstra interesse em manter."
+          ],
+          temTabela: true,
+          tabela: [
+            { ano: "2019 · 5.º", media: "8,7", cor: "#2F6B4F", marco: "Ingresso. Frequência 99%. Destaque em leitura." },
+            { ano: "2020 · 6.º", media: "8,4", cor: "#2F6B4F", marco: "Ano remoto. Participação regular nas aulas síncronas." },
+            { ano: "2021 · 7.º", media: "8,0", cor: "#2F6B4F", marco: "Primeira menção honrosa na OBA." },
+            { ano: "2022 · 8.º", media: "7,3", cor: "#2F6B4F", marco: "Queda em matemática. Encaminhamento para avaliação." },
+            { ano: "2023 · 9.º", media: "7,0", cor: "#2F6B4F", marco: "Prata na OBA. Início do IEP nível 3." },
+            { ano: "2024 · 9.º", media: "6,9", cor: "#B98A4E", marco: "Laudo de TDAH e dislexia. Plano de adaptações iniciado." },
+            { ano: "2025 · 1.ª EM", media: "6,9", cor: "#B98A4E", marco: "PET Cambridge com Merit. Frequência 93%." },
+            { ano: "2026 · 1.ª EM", media: "6,8", cor: "#9E3B2C", marco: "Recuperação em matemática e física. Frequência 87,4%." }
+          ],
+          acao: "Exportar análise"
+        }
+      }), 1500);
+    };
+
+    const respostas = [
+      ["Por que as notas de exatas caíram neste ano?", "Três fatores aparecem juntos nos registros:\n\n1. Frequência — 19 das 32 faltas são no 1.º horário, onde estão 3 das 4 aulas de matemática.\n2. Ajuste de medicação em maio, relatado pela mãe na ata de 04/08 e acompanhado por neurologista.\n3. Ausência em 5 das 14 convocações do núcleo de apoio de matemática.\n\nAs adaptações do plano de NEE estão aplicadas desde março, então a hipótese mais provável é exposição reduzida ao conteúdo, não falta de suporte."],
+      ["Ela está em risco de reprovação?", "Não no cenário atual. Matemática (5,2) e Física (4,8) estão em recuperação paralela no 3.º bimestre, mas a média anual projetada fica em 5,8 e 5,7 — acima do mínimo de 5,0 com o 4.º bimestre em curso.\n\nO risco relevante é de frequência: 87,4% ainda está acima do limite de 75%, porém o 3.º bimestre fechou em 84%. Se mantiver esse ritmo, o ano termina próximo de 82%."],
+      ["O que a família já combinou com a escola?", "Quatro combinados registrados em ata:\n\n• Presença obrigatória no núcleo de apoio de matemática, quartas (04/08)\n• Provas de exatas no 1.º horário e em sala reduzida (04/08)\n• Contraturno mantido às terças e quintas até reavaliação em agosto (12/05)\n• Inclusão do pai nos comunicados — pendente (12/05)\n\nO único ponto de divergência entre os responsáveis é a permanência no After School."]
+    ];
+    const enviarPergunta = (q, a) => {
+      this.setState(s => ({ chat: s.chat.concat([{ who: "user", txt: q }, { who: "ia", txt: "…" }]), rascunho: "" }));
+      setTimeout(() => this.setState(s => {
+        const c = s.chat.slice(0, -1);
+        return { chat: c.concat([{ who: "ia", txt: a }]) };
+      }), 1100);
+    };
+    const sugestoes = respostas.map(r => ({ q: r[0], perguntar: () => enviarPergunta(r[0], r[1]) }));
+
+    const mensagens = st.chat.map(m => ({
+      txt: m.txt,
+      align: m.who === "user" ? "flex-end" : "flex-start",
+      bg: m.who === "user" ? "#E3C39D" : "rgba(255,255,255,.07)",
+      cor: m.who === "user" ? "#0B3053" : "rgba(255,255,255,.92)",
+      borda: m.who === "user" ? "#E3C39D" : "rgba(255,255,255,.14)"
+    }));
+
+    const printSecs = seccoes.map(([k, nome]) => ({
+      nome, marca: st.printSel[k] ? "✓" : "",
+      bg: st.printSel[k] ? "#0B3053" : "#fff", borda: st.printSel[k] ? "#0B3053" : "#C9D2DB",
+      alternar: () => this.setState(s => ({ printSel: Object.assign({}, s.printSel, { [k]: !s.printSel[k] }) }))
+    }));
+    const assinDef = [["responsavel", "Assinatura do responsável"], ["gestor", "Assinatura da direção"], ["coord", "Assinatura da coordenação"]];
+    const printAssin = assinDef.map(([k, nome]) => ({
+      nome, marca: st.assin[k] ? "✓" : "",
+      bg: st.assin[k] ? "#0B3053" : "#fff", borda: st.assin[k] ? "#0B3053" : "#C9D2DB",
+      alternar: () => this.setState(s => ({ assin: Object.assign({}, s.assin, { [k]: !s.assin[k] }) }))
+    }));
+    const nSel = seccoes.filter(([k]) => st.printSel[k]).length;
+
+    const blocosPrint = {
+      notas: { titulo: "Notas e desempenho", sub: "Médias por bimestre · fonte Sophia, atas de notas", linhas: this.base().map(d => ({ esq: d[0], meio: "1.º " + d[2][0].toFixed(1) + " · 2.º " + d[2][1].toFixed(1) + " · 3.º " + d[2][2].toFixed(1) + " · média da turma " + d[3].toFixed(1), dir: (d[2].reduce((a, b) => a + b, 0) / 4).toFixed(1).replace(".", ",") })) },
+      faltas: { titulo: "Faltas e frequência", sub: "32 faltas no ano · frequência 87,4%", linhas: [{ esq: "1.º bimestre", meio: "5 faltas · nenhuma injustificada", dir: "94%" }, { esq: "2.º bimestre", meio: "8 faltas · 2 atestados", dir: "90%" }, { esq: "3.º bimestre", meio: "13 faltas · concentradas no 1.º horário", dir: "84%" }, { esq: "4.º bimestre (parcial)", meio: "6 faltas até 12/08", dir: "86%" }] },
+      ocorrencias: { titulo: "Ocorrências e elogios", sub: "7 ocorrências · 4 elogios", linhas: ocorTodas.slice(0, 8).map(o => ({ esq: o.tipo + " · " + o.data, meio: o.titulo, dir: "" })) },
+      reunioes: { titulo: "Reuniões e entrevistas", sub: "Conteúdo integral das atas omitido nesta via", linhas: this.reunioesBase().map(r => ({ esq: r.data, meio: r.titulo + " · " + r.participantes, dir: r.duracao })) },
+      saude: { titulo: "Saúde, NEE e adaptações", sub: "Dado sensível — impressão controlada", linhas: [{ esq: "Alergia grave", meio: "Amendoim e castanhas · adrenalina autoinjetável na enfermaria", dir: "" }, { esq: "Asma leve", meio: "Broncodilatador de resgate autorizado", dir: "" }, { esq: "NEE", meio: "TDAH e dislexia · laudo fev/2026 · 6 adaptações ativas", dir: "" }, { esq: "Restrição de saída", meio: "Somente mãe e van Rota 4", dir: "" }] },
+      extra: { titulo: "Extracurriculares e matrículas", sub: "212 h no ano", linhas: [{ esq: "After School", meio: "Terças e quintas · contraturno completo", dir: "96 h" }, { esq: "IEP — nível 4", meio: "2 h semanais · V-Test semestral", dir: "68 h" }, { esq: "Judô", meio: "1 h semanal · faixa verde", dir: "34 h" }, { esq: "Eletiva: Projeto Social", meio: "1.º semestre", dir: "17 h" }] },
+      olimpiadas: { titulo: "Olimpíadas e premiações", sub: "Desde 2021", linhas: [{ esq: "OBA 2023", meio: "Olimpíada Brasileira de Astronomia", dir: "Prata" }, { esq: "OBMEP 2024", meio: "Fase 2 · nível 2", dir: "Bronze" }, { esq: "Canguru 2025", meio: "Nível C", dir: "Menção" }] },
+      simulados: { titulo: "Simulados e redação", sub: "Evolucional e Bernoulli", linhas: [{ esq: "EVO ENEM · jul/2026", meio: "Linguagens 640 · Humanas 720 · Natureza 520 · Matemática 480", dir: "590" }, { esq: "Redação · jul/2026", meio: "Competência 3 é o gargalo (120)", dir: "720" }] },
+      ingles: { titulo: "Inglês", sub: "IEP nível 4", linhas: [{ esq: "V-Test 2026.1", meio: "Escala 20–80 · referência CEFR", dir: "61 · B1+" }, { esq: "Cambridge PET", meio: "Aplicado em nov/2025", dir: "Merit" }] },
+      nucleo: { titulo: "Núcleo de apoio", sub: "Convocações e presenças", linhas: [{ esq: "Matemática", meio: "8 convocações · 4 ausências não justificadas", dir: "50%" }, { esq: "Física", meio: "6 convocações · 1 ausência", dir: "83%" }, { esq: "Química (avulso)", meio: "3 presenças voluntárias", dir: "—" }] },
+      enfermaria: { titulo: "Enfermaria", sub: "9 atendimentos em 2026", linhas: [{ esq: "Cefaleia", meio: "5 atendimentos · 3 com liberação para casa", dir: "5" }, { esq: "Ansiedade", meio: "2 atendimentos em dias de avaliação", dir: "2" }, { esq: "Asma", meio: "1 uso de broncodilatador", dir: "1" }] },
+      comunicacao: { titulo: "Comunicação e Stift", sub: "Layers e Stift", linhas: [{ esq: "Leitura de comunicados", meio: "14 de 24 comunicados lidos pela família", dir: "58%" }, { esq: "Dúvidas no Stift", meio: "23 perguntas · 11 em matemática", dir: "23" }] }
+    };
+    const printBlocos = seccoes.filter(([k]) => st.printSel[k]).map(([k]) => blocosPrint[k]);
+    const assinaturas = [
+      st.assin.responsavel ? { nome: "Renata Sartori Albuquerque", papel: "Responsável pedagógico" } : null,
+      st.assin.coord ? { nome: "Ana Marques", papel: "Coordenação de Ensino Médio" } : null,
+      st.assin.gestor ? { nome: "Roberto Salgueiro", papel: "Direção Geral" } : null
+    ].filter(Boolean);
+
+    return {
+      isPainel: st.view === "painel",
+      isImpressao: st.view === "impressao",
+      open, chev, toggle,
+      abrirTudo: () => setAll(true), fecharTudo: () => setAll(false),
+
+      chips: ["RM 2019-0834", "1.ª série B — Ensino Médio", "16 anos · 12/05/2010", "Matrícula ativa desde 2019", "NEE — plano ativo", "Bolsa 30% (mérito)"],
+      blocosMain: [
+        { titulo: "Dados fundamentais", itens: [{ rotulo: "Nascimento", valor: "12/05/2010 (16)", cor: "#172026" }, { rotulo: "Conta Google", valor: "marina.albuquerque@", cor: "#172026" }, { rotulo: "Turma", valor: "1.ª série B · sala 204", cor: "#172026" }] },
+        { titulo: "Responsáveis", itens: [{ rotulo: "Pedagógico", valor: "Renata Sartori (mãe)", cor: "#172026" }, { rotulo: "Financeiro", valor: "Paulo Albuquerque (pai)", cor: "#172026" }, { rotulo: "Guarda", valor: "Compartilhada · doc. 2024", cor: "#9E3B2C" }], acaoLabel: "Ver telefones e e-mails", acao: () => this.setState({ modal: { tag: "Contatos · acesso nível 3", titulo: "Contatos dos responsáveis", sub: "Marina Sartori Albuquerque · RM 2019-0834", linhas: [{ rotulo: "Renata Sartori (mãe)", valor: "(11) 98432-1177 · renata.sartori@gmail.com · recebe comunicados" }, { rotulo: "Paulo Albuquerque (pai)", valor: "(11) 97744-0921 · paulo.alb@outlook.com · não cadastrado em comunicados" }, { rotulo: "Emergência", valor: "Avó materna — Célia Sartori · (11) 3081-4420" }, { rotulo: "Van Rota 4", valor: "Cleber Nunes · (11) 96522-7788 · autorizado" }], paragrafos: ["Pendência aberta na ata de 12/05/2026: incluir o responsável financeiro na lista de comunicados pedagógicos."], acao: "Atualizar cadastro" } }) },
+        { titulo: "Saúde e saída", itens: [{ rotulo: "Alergias", valor: "Amendoim, castanhas", cor: "#9E3B2C" }, { rotulo: "Condições", valor: "Asma leve · TDAH · dislexia", cor: "#9E3B2C" }, { rotulo: "Saída", valor: "Somente mãe e van Rota 4", cor: "#9E3B2C" }], acaoLabel: "Abrir ficha de saúde", acao: () => this.setState(s => ({ open: Object.assign({}, s.open, { saude: true }) })) }
+      ],
+      kpis: [
+        { valor: "6,8", label: "Média geral do ano", nota: "turma: 7,3", cor: "#B98A4E" },
+        { valor: "87,4%", label: "Frequência", nota: "limite: 75%", cor: "#9E3B2C" },
+        { valor: "32", label: "Faltas no ano", nota: "19 no 1.º horário", cor: "#9E3B2C" },
+        { valor: "7 / 4", label: "Ocorrências / elogios", nota: "última em 28/07", cor: "#0B3053" },
+        { valor: "5", label: "Reuniões com a família", nota: "próxima 21/08", cor: "#0B3053" },
+        { valor: "2", label: "Disciplinas em recuperação", nota: "matemática, física", cor: "#9E3B2C" }
+      ],
+      alertas: [
+        { tag: "NEE", titulo: "Plano de adaptações ativo", detalhe: "TDAH e dislexia · laudo fev/2026 · 6 adaptações", cor: "#9E3B2C", abrir: () => this.setState(s => ({ open: Object.assign({}, s.open, { saude: true }) })) },
+        { tag: "Saúde", titulo: "Alergia grave a amendoim e castanhas", detalhe: "Adrenalina autoinjetável na enfermaria · protocolo revisado 12/03", cor: "#9E3B2C", abrir: () => this.setState(s => ({ open: Object.assign({}, s.open, { saude: true }) })) },
+        { tag: "Saída", titulo: "Retirada restrita", detalhe: "Somente a mãe e a van Rota 4 · guarda compartilhada", cor: "#B98A4E", abrir: () => this.setState(s => ({ open: Object.assign({}, s.open, { saude: true }) })) },
+        { tag: "Frequência", titulo: "Queda de frequência no 3.º bimestre", detalhe: "84% no bimestre · 19 faltas no 1.º horário", cor: "#B98A4E", abrir: () => this.setState(s => ({ open: Object.assign({}, s.open, { faltas: true }) })) }
+      ],
+
+      bimTabs, disciplinas,
+      freqBim: [["1.º bim.", 94, 5], ["2.º bim.", 90, 8], ["3.º bim.", 84, 13], ["4.º bim.", 86, 6]].map(f => ({
+        rotulo: f[0], pct: f[1] + "%", faltas: f[2], altura: Math.round(((f[1] - 70) / 30) * 100) + "%",
+        cor: f[1] < 86 ? "#9E3B2C" : f[1] < 92 ? "#B98A4E" : "#2F6B4F"
+      })),
+      faltasDisc: [["Matemática", 7], ["Física", 5], ["Língua Portuguesa", 3], ["Química", 3], ["Inglês — IEP", 3], ["Geografia", 2], ["Redação", 2], ["Educação Física", 2]].map(f => ({
+        nome: f[0], valor: f[1], barra: Math.round((f[1] / 7) * 100) + "%", cor: f[1] >= 5 ? "#9E3B2C" : f[1] >= 3 ? "#B98A4E" : "#6E7378"
+      })),
+      tiposOcorrencia, ocorrencias,
+      filtroLabel: st.filtro ? "Filtrando por " + st.filtro + " · clique no cartão de novo para limpar" : "Todos os registros de 2026, do mais recente ao mais antigo",
+      reunioes, resumirAtas: resumoAtas, verHistorico: historico,
+      labelResumo: st.carregandoResumo ? "Resumindo atas… ✦" : "Resumir todas as atas ✦",
+      labelHistorico: st.carregandoHist ? "Analisando histórico… ✦" : "Análise de histórico 2019→2026 ✦",
+
+      blocosSaude: [
+        { titulo: "Saúde", itens: [{ titulo: "Alergia grave — amendoim e castanhas", detalhe: "Adrenalina autoinjetável na enfermaria, válida até 11/2027. Réplica na coordenação.", cor: "#9E3B2C" }, { titulo: "Asma leve", detalhe: "Broncodilatador de resgate autorizado por escrito pela mãe.", cor: "#B98A4E" }, { titulo: "Uso de medicação contínua", detalhe: "Metilfenidato · ajuste de dose em maio/2026, acompanhado por neurologista.", cor: "#B98A4E" }, { titulo: "Alimentação (After School)", detalhe: "Bandeja identificada na cantina; recusa frequente de proteína — relato das monitoras.", cor: "#6E7378" }] },
+        { titulo: "NEE — adaptações ativas", itens: [{ titulo: "Tempo estendido de 25%", detalhe: "Todas as avaliações, incluindo simulados.", cor: "#0B3053" }, { titulo: "Prova em sala reduzida", detalhe: "Máximo de 8 estudantes, sem estímulo sonoro.", cor: "#0B3053" }, { titulo: "Leitura de enunciados quando solicitada", detalhe: "Aplicador orientado a ler sem interpretar.", cor: "#0B3053" }, { titulo: "Material com fonte ampliada", detalhe: "Fonte 14, espaçamento 1,5 — impressão pela secretaria.", cor: "#0B3053" }, { titulo: "Prazo estendido em listas e trabalhos", detalhe: "Até 5 dias úteis, comunicado ao professor.", cor: "#0B3053" }, { titulo: "Avaliação de exatas no 1.º horário", detalhe: "Acordado na entrevista de 04/08/2026.", cor: "#0B3053" }] },
+        { titulo: "Saída e autorizações", itens: [{ titulo: "Retirada autorizada", detalhe: "Renata Sartori (mãe) e Cleber Nunes (van Rota 4).", cor: "#9E3B2C" }, { titulo: "Não autorizado a retirar", detalhe: "Paulo Albuquerque (pai) — restrição por documento de 2024 em cartório.", cor: "#9E3B2C" }, { titulo: "Saída livre", detalhe: "Não autorizada.", cor: "#6E7378" }, { titulo: "Uso de imagem", detalhe: "Autorizado para comunicação interna; vedado para redes sociais.", cor: "#6E7378" }] }
+      ],
+      extras: [
+        { nome: "After School — contraturno completo", detalhe: "Terças e quintas · tutoria, esporte e oficinas", periodo: "Ano inteiro", ch: "96 h", freq: "91%", cor: "#B98A4E" },
+        { nome: "IEP — International Extensive Program", detalhe: "Nível 4 · 2 h/semana · V-Test semestral", periodo: "Ano inteiro", ch: "68 h", freq: "96%", cor: "#2F6B4F" },
+        { nome: "Judô", detalhe: "1 h/semana · faixa verde", periodo: "Ano inteiro", ch: "34 h", freq: "88%", cor: "#B98A4E" },
+        { nome: "Eletiva — Projeto Social e Voluntariado", detalhe: "50 min/semana · projeto “Leitura na Praça”", periodo: "1.º semestre", ch: "17 h", freq: "100%", cor: "#2F6B4F" },
+        { nome: "Eletiva — Medicina Forense", detalhe: "50 min/semana", periodo: "2.º semestre", ch: "17 h", freq: "94%", cor: "#2F6B4F" },
+        { nome: "Núcleo de apoio de Matemática", detalhe: "Quartas · convocação obrigatória desde 04/08", periodo: "3.º e 4.º bim.", ch: "12 h", freq: "50%", cor: "#9E3B2C" }
+      ],
+      olimpiadas: [
+        { resultado: "Prata", nome: "OBA 2023", detalhe: "Olimpíada Brasileira de Astronomia · 9.º ano", medalCor: "oklch(0.84 0.01 250)", medalBorda: "oklch(0.66 0.02 250)" },
+        { resultado: "Bronze", nome: "OBMEP 2024", detalhe: "Fase 2 · nível 2", medalCor: "oklch(0.63 0.09 52)", medalBorda: "oklch(0.5 0.08 48)" },
+        { resultado: "Menção honrosa", nome: "Canguru de Matemática 2025", detalhe: "Nível C", medalCor: "#EDEAE3", medalBorda: "#D3CEC4" },
+        { resultado: "Menção honrosa", nome: "OBA 2021", detalhe: "Primeira participação · 7.º ano", medalCor: "#EDEAE3", medalBorda: "#D3CEC4" },
+        { resultado: "Menção honrosa", nome: "Olimpíada de Língua Portuguesa 2025", detalhe: "Categoria crônica · etapa escolar", medalCor: "#EDEAE3", medalBorda: "#D3CEC4" },
+        { resultado: "Participação", nome: "OBMEP 2026", detalhe: "Fase 1 · resultado em outubro", medalCor: "#EDEAE3", medalBorda: "#D3CEC4" }
+      ],
+      aplicacoes: ["EVO mar/26", "Bernoulli mai/26", "EVO jul/26"],
+      areas: [
+        { nome: "Linguagens", v: [610, 630, 640] }, { nome: "Humanas", v: [690, 705, 720] },
+        { nome: "Natureza", v: [540, 505, 520] }, { nome: "Matemática", v: [520, 470, 480] }, { nome: "Nota geral", v: [590, 578, 590] }
+      ].map(a => ({ nome: a.nome, notas: a.v.map(v => ({ v, cor: v < 520 ? "#9E3B2C" : v < 650 ? "#B98A4E" : "#2F6B4F", bg: v < 520 ? "#FAF0EE" : v < 650 ? "#F9F5EE" : "#EEF5F1" })) })),
+      competencias: [["C1 — Norma culta", 160], ["C2 — Tema e repertório", 160], ["C3 — Argumentação", 120], ["C4 — Coesão", 140], ["C5 — Proposta de intervenção", 140]].map(c => ({
+        nome: c[0], nota: c[1], barra: Math.round((c[1] / 200) * 100) + "%", cor: c[1] < 140 ? "#9E3B2C" : c[1] < 160 ? "#B98A4E" : "#2F6B4F"
+      })),
+      vtest: [["2023.2", "A2+", 46], ["2024.1", "B1", 51], ["2024.2", "B1", 54], ["2025.1", "B1", 57], ["2025.2", "B1+", 59], ["2026.1", "B1+", 61]].map(v => ({
+        periodo: v[0], nivel: v[1], nota: v[2], altura: Math.round(((v[2] - 20) / 60) * 100) + "%", cor: v[2] >= 55 ? "#0B3053" : "#E3C39D"
+      })),
+      inglesCards: [
+        { rotulo: "Nível interno (Sophia)", valor: "IEP 4", detalhe: "Turma IEP 4B · promovida em jan/2026" },
+        { rotulo: "Cambridge", valor: "PET · Merit", detalhe: "Aplicado em nov/2025 · próximo: FCE em 2027" },
+        { rotulo: "Níveis do Afere", valor: "Nível 3", detalhe: "Marcação das professoras do After · leitura fluente" }
+      ],
+      nucleos: [
+        { nome: "Matemática (convocação)", conv: 8, pres: 4, aus: 4, corAus: "#9E3B2C", obs: "Ausências não justificadas em jul; família comunicada em 04/08." },
+        { nome: "Física (convocação)", conv: 6, pres: 5, aus: 1, corAus: "#B98A4E", obs: "Boa adesão; melhora de 4,8 para 5,9 no bimestre." },
+        { nome: "Química (avulso)", conv: 0, pres: 3, aus: 0, corAus: "#6E7378", obs: "Presença voluntária, elogiada pela professora." },
+        { nome: "Redação (avulso)", conv: 0, pres: 2, aus: 0, corAus: "#6E7378", obs: "Focada na competência 3." }
+      ],
+      enfermaria: [
+        { data: "06/08/2026", motivo: "Cefaleia", conduta: "Repouso 30 min · analgésico autorizado", desfecho: "Retornou à aula", cor: "#2F6B4F" },
+        { data: "28/07/2026", motivo: "Sonolência excessiva", conduta: "Repouso · contato com a mãe", desfecho: "Liberada para casa", cor: "#B98A4E" },
+        { data: "15/07/2026", motivo: "Cefaleia", conduta: "Repouso 20 min", desfecho: "Retornou à aula", cor: "#2F6B4F" },
+        { data: "28/05/2026", motivo: "Crise de ansiedade", conduta: "Acolhimento · prova em sala separada", desfecho: "Realizou avaliação", cor: "#B98A4E" },
+        { data: "09/05/2026", motivo: "Falta de ar (asma)", conduta: "Broncodilatador de resgate", desfecho: "Liberada para casa", cor: "#9E3B2C" },
+        { data: "22/04/2026", motivo: "Cefaleia", conduta: "Repouso · hidratação", desfecho: "Retornou à aula", cor: "#2F6B4F" },
+        { data: "31/03/2026", motivo: "Dor abdominal", conduta: "Observação 40 min", desfecho: "Liberada para casa", cor: "#B98A4E" },
+        { data: "17/03/2026", motivo: "Cefaleia", conduta: "Repouso 25 min", desfecho: "Retornou à aula", cor: "#2F6B4F" },
+        { data: "04/03/2026", motivo: "Escoriação no joelho", conduta: "Antisséptico e curativo", desfecho: "Retornou à aula", cor: "#2F6B4F" }
+      ],
+      comunicados: [
+        { titulo: "Convocação — entrevista de 21/08", data: "08/08/2026", status: "Lido", cor: "#2F6B4F" },
+        { titulo: "Calendário do 3.º bimestre", data: "22/07/2026", status: "Não lido", cor: "#9E3B2C" },
+        { titulo: "Protocolo de alergias — reforço", data: "10/07/2026", status: "Lido", cor: "#2F6B4F" },
+        { titulo: "Feira Cultural — autorizações", data: "28/05/2026", status: "Lido", cor: "#2F6B4F" },
+        { titulo: "Recuperação paralela — orientações", data: "14/04/2026", status: "Não lido", cor: "#9E3B2C" }
+      ],
+      stift: [["Matemática", 11], ["Física", 5], ["Química", 3], ["Redação", 3], ["Biologia", 1]].map(s => ({ nome: s[0], qtd: s[1], barra: Math.round((s[1] / 11) * 100) + "%" })),
+
+      mensagens, sugestoes, rascunho: st.rascunho,
+      digitar: e => this.setState({ rascunho: e.target.value }),
+      enviar: () => {
+        const q = (st.rascunho || "").trim();
+        if (!q) return;
+        enviarPergunta(q, "Consultei os registros da Marina de 2026 e o histórico desde 2019. Nesta demonstração, as respostas completas estão prontas para as três perguntas sugeridas abaixo — a integração com o modelo responde qualquer pergunta em produção.");
+      },
+      pontosAtencao: [
+        { titulo: "Frequência em trajetória descendente", detalhe: "94% → 90% → 84% nos três bimestres. Se mantiver, o ano fecha perto de 82%.", fonte: "Sophia · faltas por período", cor: "#9E3B2C" },
+        { titulo: "Ausência em núcleo obrigatório", detalhe: "4 das 8 convocações de matemática sem justificativa, todas depois de junho.", fonte: "Airtable · núcleo de apoio", cor: "#9E3B2C" },
+        { titulo: "Combinado de ata não executado", detalhe: "O pai segue fora da lista de comunicados desde 12/05.", fonte: "Sophia · entrevistas", cor: "#B98A4E" },
+        { titulo: "Família lendo menos comunicados", detalhe: "58% de leitura contra 81% da turma.", fonte: "Layers · índice de leitura", cor: "#B98A4E" }
+      ],
+      fontes: [
+        { nome: "Sophia", status: "hoje, 06h10", cor: "#2F6B4F" },
+        { nome: "Airtable (olimpíadas, núcleo)", status: "automático", cor: "#2F6B4F" },
+        { nome: "Evolucional / Bernoulli", status: "quinzenal", cor: "#2F6B4F" },
+        { nome: "Enfermaria (planilha)", status: "a reformular", cor: "#B98A4E" },
+        { nome: "Afere · V-Test", status: "manual", cor: "#B98A4E" }
+      ],
+
+      modal: st.modal
+        ? { aberto: true, tag: st.modal.tag, titulo: st.modal.titulo, sub: st.modal.sub, linhas: st.modal.linhas || [], paragrafos: st.modal.paragrafos || [], acao: st.modal.acao || "Fechar", carregando: !!st.modal.carregando, temTabela: !!st.modal.temTabela, tabela: st.modal.tabela || [] }
+        : { aberto: false, linhas: [], paragrafos: [], tabela: [] },
+      fecharModal: () => this.setState({ modal: null }),
+      ampliarFoto: () => this.setState({ foto: true }),
+      fotoOpen: st.foto, fecharFoto: () => this.setState({ foto: false }),
+      agendarReuniao: () => this.setState({ modal: { tag: "Nova reunião", titulo: "Agendar entrevista com a família", sub: "Sugestões de horário com base na agenda da coordenação", linhas: [{ rotulo: "Sugestão 1", valor: "21/08/2026 · 14h30 · sala da coordenação · mãe confirmada" }, { rotulo: "Sugestão 2", valor: "25/08/2026 · 08h00 · videochamada · inclui o pai" }, { rotulo: "Pauta proposta", valor: "Devolutiva do 3.º bimestre, contraturno e frequência" }], paragrafos: ["O convite será enviado pelo Layers aos dois responsáveis e registrado como entrevista no Sophia."], acao: "Enviar convite" } }),
+      registrarOcorrencia: () => this.setState({ modal: { tag: "Novo registro", titulo: "Registrar ocorrência", sub: "Marina Sartori Albuquerque · 1.ª série B", linhas: [{ rotulo: "Tipo", valor: "Disciplinar · Pedagógica · Elogio · Saúde" }, { rotulo: "Visibilidade", valor: "Família (via Layers) ou interno" }, { rotulo: "Alerta automático", valor: "Terceira ocorrência disciplinar no bimestre dispara convocação" }], paragrafos: ["Neste mockup o formulário não é enviado — o objetivo é mostrar onde a ação vive na tela."], acao: "Salvar registro" } }),
+
+      abrirBusca: () => this.setState({ busca: true }),
+      buscaOpen: st.busca, fecharBusca: () => this.setState({ busca: false }),
+      buscaTermo: st.buscaTermo,
+      digitarBusca: e => this.setState({ buscaTermo: e.target.value }),
+      resultadosBusca: [
+        { nome: "Marina Sartori Albuquerque", turma: "1.ª série B", rm: "2019-0834", ini: "MA", marca: "aberta", cor: "#B98A4E", bg: "#FBFAF8" },
+        { nome: "Marina Costa Ribeiro", turma: "9.º ano A", rm: "2021-0117", ini: "MR", marca: "", cor: "#8B9096", bg: "#fff" },
+        { nome: "Mariana Duarte Lopes", turma: "2.ª série A", rm: "2018-0442", ini: "ML", marca: "", cor: "#8B9096", bg: "#fff" },
+        { nome: "Marcelo Andrade Pinto", turma: "1.ª série B", rm: "2019-0791", ini: "MP", marca: "", cor: "#8B9096", bg: "#fff" }
+      ].map(r => Object.assign({}, r, { abrir: () => this.setState({ busca: false }) })),
+
+      abrirImpressao: () => this.setState({ printOpen: true }),
+      cancelarImpressao: () => this.setState({ printOpen: false }),
+      printOpen: st.printOpen, printSecs, printAssin,
+      printResumo: nSel + " de 12 seções · " + assinaturas.length + " assinatura(s)",
+      gerarDocumento: () => this.setState({ printOpen: false, view: "impressao" }),
+      voltarPainel: () => this.setState({ view: "painel" }),
+      imprimir: () => window.print(),
+      printBlocos, assinaturas, temAssinaturas: assinaturas.length > 0,
+      identificacao: [
+        { rotulo: "Estudante", valor: "Marina Sartori Albuquerque" },
+        { rotulo: "Matrícula (RM)", valor: "2019-0834" },
+        { rotulo: "Nascimento", valor: "12/05/2010 · 16 anos" },
+        { rotulo: "Turma", valor: "1.ª série B · sala 204" },
+        { rotulo: "Etapa", valor: "Ensino Médio · 1.ª série" },
+        { rotulo: "Ingresso", valor: "2019 (5.º ano)" },
+        { rotulo: "Responsável pedagógico", valor: "Renata Sartori" },
+        { rotulo: "Ano de referência", valor: "2026" }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

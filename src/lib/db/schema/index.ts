@@ -167,6 +167,7 @@ export const candidates = pgTable(
   "candidates",
   {
     id: uuid("id").defaultRandom().primaryKey(),
+    externalRef: text("external_ref"),
     fullName: text("full_name").notNull(),
     email: text("email"),
     phone: text("phone"),
@@ -185,7 +186,7 @@ export const candidates = pgTable(
       .defaultNow()
       .notNull(),
   },
-  (t) => [uniqueIndex("candidates_drive_cv_id_idx").on(t.driveCvId)],
+  (t) => [uniqueIndex("candidates_external_ref_idx").on(t.externalRef)],
 );
 
 export const applications = pgTable(
@@ -207,6 +208,8 @@ export const applications = pgTable(
     source: applicationSourceEnum("source").notNull().default("manual"),
     candidateObservation: text("candidate_observation"),
     differentialText: text("differential_text"),
+    externalRef: text("external_ref"),
+    examRegistration: text("exam_registration"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
@@ -219,6 +222,7 @@ export const applications = pgTable(
     index("applications_campaign_id_idx").on(t.campaignId),
     index("applications_discipline_id_idx").on(t.disciplineId),
     index("applications_operational_status_idx").on(t.operationalStatus),
+    uniqueIndex("applications_external_ref_idx").on(t.externalRef),
   ],
 );
 
@@ -338,6 +342,44 @@ export const evaluations = pgTable(
   ],
 );
 
+/**
+ * Registro de quem revelou avaliações cegas, por dimensão.
+ *
+ * Antes disto, o peek era um UPDATE em `evaluations.blind_peeked_at` filtrado
+ * por `evaluator_staff_id = <quem pediu>` — ou seja, afetava ZERO linhas
+ * exatamente para quem ainda não avaliou, que é quem precisa revelar. E
+ * `canSeePeerEvaluations` retornava `hasOwn || hasPeeked` com `hasPeeked`
+ * logicamente dominado por `hasOwn`, então era código morto.
+ *
+ * `evaluations.blind_peeked_at` permanece para compatibilidade da ingestão.
+ */
+export const blindPeeks = pgTable(
+  "blind_peeks",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    staffId: uuid("staff_id")
+      .notNull()
+      .references(() => staffUsers.id, { onDelete: "cascade" }),
+    applicationId: uuid("application_id")
+      .notNull()
+      .references(() => applications.id, { onDelete: "cascade" }),
+    dimensionId: uuid("dimension_id")
+      .notNull()
+      .references(() => dimensions.id, { onDelete: "cascade" }),
+    peekedAt: timestamp("peeked_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => [
+    uniqueIndex("blind_peeks_unique_idx").on(
+      t.staffId,
+      t.applicationId,
+      t.dimensionId,
+    ),
+    index("blind_peeks_application_idx").on(t.applicationId),
+  ],
+);
+
 export const evaluationRevisions = pgTable("evaluation_revisions", {
   id: uuid("id").defaultRandom().primaryKey(),
   evaluationId: uuid("evaluation_id")
@@ -377,9 +419,16 @@ export const teachingPracticeScores = pgTable(
       .notNull(),
     practiceCode: text("practice_code").notNull(),
     scoreRaw: numeric("score_raw", { precision: 8, scale: 4 }).notNull(),
+    rawResponse: numeric("raw_response", { precision: 8, scale: 4 }),
+    weight: numeric("weight", { precision: 8, scale: 4 }),
+    direction: text("direction"),
   },
   (t) => [
     index("teaching_practice_scores_application_id_idx").on(t.applicationId),
+    uniqueIndex("teaching_practice_scores_app_practice_idx").on(
+      t.applicationId,
+      t.practiceCode,
+    ),
   ],
 );
 
@@ -398,6 +447,10 @@ export const importedDimensionScores = pgTable(
   },
   (t) => [
     index("imported_dimension_scores_application_id_idx").on(t.applicationId),
+    uniqueIndex("imported_dimension_scores_app_dim_idx").on(
+      t.applicationId,
+      t.dimensionId,
+    ),
   ],
 );
 
@@ -418,6 +471,8 @@ export const lessonTestEvaluations = pgTable(
     evaluatorStaffId: uuid("evaluator_staff_id")
       .references(() => staffUsers.id)
       .notNull(),
+    /** Identificador da planilha (`AT-2025-18`). Uma candidatura pode ter várias aulas. */
+    externalRef: text("external_ref"),
     vacancyLabel: text("vacancy_label"),
     comment: text("comment"),
     evaluatedAt: timestamp("evaluated_at", { withTimezone: true }),
@@ -427,6 +482,7 @@ export const lessonTestEvaluations = pgTable(
   },
   (t) => [
     index("lesson_test_evaluations_application_id_idx").on(t.applicationId),
+    uniqueIndex("lesson_test_evaluations_external_ref_idx").on(t.externalRef),
   ],
 );
 
@@ -526,6 +582,31 @@ export const applicationFlags = pgTable("application_flags", {
   flagCode: text("flag_code").notNull(),
   active: boolean("active").notNull().default(true),
 });
+
+export const secondPhaseConfirmations = pgTable(
+  "second_phase_confirmations",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    campaignId: uuid("campaign_id")
+      .references(() => campaigns.id)
+      .notNull(),
+    candidateId: uuid("candidate_id")
+      .references(() => candidates.id)
+      .notNull(),
+    externalRef: text("external_ref").notNull(),
+    examChoice: text("exam_choice").notNull(),
+    confirmedAt: timestamp("confirmed_at", { withTimezone: true }),
+    emailDiverged: boolean("email_diverged").notNull().default(false),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => [
+    index("second_phase_confirmations_campaign_id_idx").on(t.campaignId),
+    index("second_phase_confirmations_candidate_id_idx").on(t.candidateId),
+    uniqueIndex("second_phase_confirmations_external_ref_idx").on(t.externalRef),
+  ],
+);
 
 export const schedules = pgTable(
   "schedules",

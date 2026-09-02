@@ -166,17 +166,26 @@ async function foldScoreInputs(
       .where(inArray(lessonTestScores.lessonTestEvaluationId, evalIds));
 
     const appByEval = new Map(lessonEvals.map((e) => [e.id, e.applicationId]));
-    const numsByApp = new Map<string, number[]>();
+    const scoresByEval = new Map<string, number[]>();
     for (const s of scores) {
-      const appId = appByEval.get(s.evalId);
-      if (!appId) continue;
-      const list = numsByApp.get(appId);
-      const n = Number(s.score);
-      if (list) list.push(n);
-      else numsByApp.set(appId, [n]);
+      const list = scoresByEval.get(s.evalId) ?? [];
+      list.push(Number(s.score));
+      scoresByEval.set(s.evalId, list);
     }
-    for (const [appId, nums] of numsByApp) {
-      lessonScoreByApp.set(appId, average(nums));
+
+    const evalAveragesByApp = new Map<string, number[]>();
+    for (const [evalId, criterionScores] of scoresByEval) {
+      const appId = appByEval.get(evalId);
+      if (!appId) continue;
+      const evalAvg = average(criterionScores);
+      if (evalAvg === null) continue;
+      const list = evalAveragesByApp.get(appId) ?? [];
+      list.push(evalAvg);
+      evalAveragesByApp.set(appId, list);
+    }
+
+    for (const [appId, evaluatorAverages] of evalAveragesByApp) {
+      lessonScoreByApp.set(appId, average(evaluatorAverages));
     }
   }
 
@@ -293,7 +302,12 @@ export function assembleScoresForApplications(
   applicationIds: string[],
   catalog: ScoringCatalog,
   inputs: ScoreInputs,
-  options?: { staffUserId?: string; forceReveal?: boolean },
+  options?: {
+    staffUserId?: string;
+    forceReveal?: boolean;
+    /** Por candidatura: códigos de dimensão que o usuário revelou. */
+    peeksByApp?: Map<string, ReadonlySet<string>>;
+  },
 ): Map<string, ConsolidatedResult> {
   const result = new Map<string, ConsolidatedResult>();
   const dimensionCodes = catalog.dimensions.map((d) => d.code);
@@ -308,6 +322,7 @@ export function assembleScoresForApplications(
         lessonTestScore: inputs.lessonScoreByApp.get(id) ?? null,
         staffUserId: options?.staffUserId,
         forceReveal: options?.forceReveal,
+        peekedDimensionCodes: options?.peeksByApp?.get(id),
       }),
     );
   }
@@ -316,7 +331,11 @@ export function assembleScoresForApplications(
 
 export async function buildDimensionScoresForApplications(
   applicationIds: string[],
-  options?: { staffUserId?: string; forceReveal?: boolean },
+  options?: {
+    staffUserId?: string;
+    forceReveal?: boolean;
+    peeksByApp?: Map<string, ReadonlySet<string>>;
+  },
 ): Promise<Map<string, ConsolidatedResult>> {
   const uniqueIds = [...new Set(applicationIds)];
   if (uniqueIds.length === 0) return new Map();

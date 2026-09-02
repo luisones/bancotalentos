@@ -2,16 +2,20 @@ import type { Metadata } from "next";
 import { Archivo, Source_Sans_3 } from "next/font/google";
 import "./globals.css";
 
+// A referência usa Archivo 500/600/700 (nunca 400 como display) e
+// Source Sans 3 a partir do 300, com itálico.
 const archivo = Archivo({
   variable: "--font-archivo",
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
+  weight: ["500", "600", "700"],
+  style: ["normal", "italic"],
 });
 
 const sourceSans = Source_Sans_3({
   variable: "--font-source-sans",
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
+  weight: ["300", "400", "600", "700"],
+  style: ["normal", "italic"],
 });
 
 export const metadata: Metadata = {

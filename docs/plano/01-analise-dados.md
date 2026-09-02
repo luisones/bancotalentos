@@ -1,45 +1,50 @@
 # Análise dos dados
 
-Arquivo: `dados-brutos/Anonimizado - BANCO TALENTOS DOCENTE EFAF-EM 2025.xlsx`
+Fonte de ingestão: workbooks normalizados em `tmp/*_ANONIMIZADO.xlsx` (desenvolvimento) e `tmp/*_IDENTIFICADO.xlsx` (produção local, nunca versionar).
 
-## Abas
+## Campanhas
 
-| Aba | Linhas | Uso |
-|-----|--------|-----|
-| PROFESSORES | 271 (270 dados) | Candidaturas campanha 2025 |
-| AULAS_TESTE | 18 avaliações reais | Rubrica aula-teste |
-| App Metadata | 2 | Ignorar |
+| Campanha | Candidatos | Candidaturas | LLM evals | Scores dimensão | Aulas-teste |
+|----------|------------|--------------|-----------|-----------------|-------------|
+| 2025-efaf-em | 264 | 270 | 3.375 | 729 | 18 × 14 critérios |
+| 2026-scs | 428 | 437* | ≤ 2.965 | ≤ 914 | — |
+
+\*437 após excluir `CAND-2026-399` (envio de teste).
+
+## Chaves de ingestão
+
+- **`pessoa_id`** (`PES-2025-###` / `PES-2026-###`) — chave natural de candidato (`candidates.external_ref`)
+- **`candidatura_id`** (`CAND-…`) — chave de candidatura (`applications.external_ref`)
+- **`matricula`** — inscrição da prova 2026 (`applications.exam_registration`)
+- Drive CV ID permanece em `documents`, **não** como chave de pessoa
 
 ## Fórmulas validadas
 
 | Campo | Fórmula |
 |-------|---------|
-| `Apr Dis (F)` | `10 × (Q1F+Q2F+Q3F+Q4F) / 120` |
-| `Apr Obj` | `10 × soma(19 práticas) / 170` |
-| `FINAL CONT` | `(OBJ CONT + 2×DISC CONT) / 3` |
+| `QnF` | `Σ(w_p × score_p) / Σ(w_p presentes)` com L=0,5 · G=0,15 · A=0,175 · O=0,175 |
+| `Apr Dis (F)` / `didatica_humana` | `10 × (Q1F+Q2F+Q3F+Q4F) / 120` |
+| `Apr Obj` / `didatica_objetiva` | `10 × Σ(19 práticas valor) / 170` |
+| `FINAL CONT` / `prova_conteudo` | `(OBJ CONT + 2×DISC CONT) / 3` [2025] |
 
-Práticas (cols 54–72): Aferição Constante, Trabalhos em Grupo, Seminários, Devolutiva Individualizada, Trabalhos de Pesquisa, Participação Estimulada, Estímulo ao Erro, Filmes e Séries, Diagnóstico de Pré-requisitos, Lousa Interativa, Análise de resultados por habilidade, Exercícios frequentes, Cronômetro/tempo, Sermões, Focar nos interessados, Destacar erros publicamente, Corrigir comportamento imperceptível, Correção pública, Planejamento de aula.
+Prática 4 (*Devolutiva Individualizada*): peso **1,5 FWD** (corrigido; planilha original gravava 0).
 
-## Disciplinas (9)
+## Disciplinas
 
-História (49), Biologia (42), Português Produção (41), Matemática (34), Geografia (30), Química (25), Filosofia/Sociologia (23), Física (15), Português Literatura (12).
+**2025 (9):** História, Biologia, Português Produção, Matemática, Geografia, Química, Filosofia/Sociologia, Física, Português Literatura.
 
-## Critérios aula-teste (14)
+**2026 (+6):** Polivalente Anos Iniciais, Polivalente Ed. Infantil, Educação Física, Inglês, Arte, Espanhol. Granularidade do formulário mapeada via `disciplina_canonica`.
 
-Empatia, Presença, Linguagem, Preparação, Material, Aferição, Clareza, Paciência, Responsabilidade, Energia, Lousa, Resolução Exercício, Voz, Confiança.
+## Cobertura 2026 — armadilhas críticas
 
-## Armadilhas anonimização
+- **171/418 candidaturas sem avaliação LLM** — zeros da planilha origem **não** importados; `avaliado_llm` marca quem foi avaliado
+- **21 faltas de prova** — `nota_valida` vazia; flag `falta_prova`
+- **7 provas com vínculo ambíguo** — não atribuídas automaticamente
+- Dimensão ausente = sem linha em `SCORES_DIMENSAO` (nunca 0)
 
-- Nome/email/telefone constantes → chave dev = **Drive file ID** do currículo
-- 3 currículos duplicados (mesmo link)
-- Cols 74–87 PROFESSORES = AVERAGEIF global (ignorar)
-- AULAS_TESTE não cruza com PROFESSORES após anonimizar nomes → `unmatched_lesson_tests`
-- STATUS e IA vazios na planilha
-- Scores LLM (L/G/A/O) em escala 0–30
+## Abas dos workbooks
 
-## Gaps (escopo pede, arquivo não tem)
-
-Entrevistas, CV/vídeo pontuados, CRM, status, tags, SCS 2026-08, textos das 4 perguntas, prompts LLM nomeados.
+`CANDIDATOS`, `CANDIDATURAS`, `DOCUMENTOS`, `RESPOSTAS`, `PRATICAS`, `AULAS_TESTE`, `SCORES_DIMENSAO`, `PROVAS` (2026), `SEGUNDA_FASE` (2026), `FLAGS_TAGS` (2026), `REJEITADOS`, `LEGENDA`
 
 ## Dimensões no consolidado
 

@@ -15,6 +15,27 @@
       "when": 1788290644632,
       "tag": "0001_query_indexes",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1788295000000,
+      "tag": "0002_ingest_external_ref",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1788372000000,
+      "tag": "0003_staff_directory",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1788332642281,
+      "tag": "0004_blind_peeks",
+      "breakpoints": true
     }
   ]
 }

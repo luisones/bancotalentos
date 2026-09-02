@@ -63,6 +63,114 @@ export const dimensionLabels: Record<string, string> = {
   socioemocional: "Socioemocional",
 };
 
+export const scheduleTypeLabels: Record<string, string> = {
+  entrevista: "Entrevista",
+  aula_teste: "Aula-teste",
+};
+
+export const scheduleStatusLabels: Record<string, string> = {
+  a_agendar: "A agendar",
+  agendado: "Agendado",
+  realizado: "Realizado",
+  faltou: "Candidato não compareceu",
+  reagendar: "A reagendar",
+  cancelado: "Cancelado",
+};
+
+export const auditActionLabels: Record<string, string> = {
+  candidate_created: "Candidato cadastrado",
+  classification_updated: "Classificação de talento alterada",
+  status_updated: "Situação alterada",
+  evaluation_saved: "Avaliação registrada",
+  quick_note_updated: "Nota rápida alterada",
+  blind_peek: "Avaliações dos colegas reveladas",
+  blind_peek_dimension: "Avaliações dos colegas reveladas em uma dimensão",
+  staff_created: "Pessoa incluída na equipe",
+  staff_role_updated: "Papel da equipe alterado",
+  staff_deactivated: "Acesso removido",
+  staff_reactivated: "Acesso restaurado",
+};
+
+/** Práticas didáticas autodeclaradas na planilha de inscrição. */
+export const teachingPracticeLabels: Record<string, string> = {
+  "afericao-constante": "Aferição constante",
+  "trabalhos-em-grupo": "Trabalhos em grupo",
+  seminarios: "Seminários",
+  "devolutiva-individualizada": "Devolutiva individualizada",
+  "trabalhos-de-pesquisa-internet": "Trabalhos de pesquisa (internet)",
+  "participacao-estimulada": "Participação estimulada",
+  "estimulo-ao-erro": "Estímulo ao erro",
+  "filmes-e-series": "Filmes e séries",
+  "diagnostico-de-pre-requisitos": "Diagnóstico de pré-requisitos",
+  "lousa-interativa": "Lousa interativa",
+  "analise-de-resultados-por-habilidade": "Análise de resultados por habilidade",
+  "exercicios-frequentes": "Exercícios frequentes",
+  "cronometro-tempo": "Cronômetro / tempo",
+  sermoes: "Sermões",
+  "focar-nos-interessados": "Focar nos interessados",
+  "destacar-erros-publicamente": "Destacar erros publicamente",
+  "corrigir-comportamento-imperceptivel":
+    "Corrigir comportamento imperceptível",
+  "correcao-publica": "Correção pública",
+  "planejamento-de-aula": "Planejamento de aula",
+};
+
+/**
+ * `teaching_practice_scores.direction` — vocabulário VERIFICADO no banco:
+ * FWD (6.870 registros) e REV (6.183). A prática "FWD" soma a favor da
+ * aprendizagem; "REV" tem direção invertida, isto é, quanto mais o candidato
+ * declara, pior. `labelFor` devolve o valor cru para qualquer outro código,
+ * em vez de esconder o que não sabemos traduzir.
+ */
+export const practiceDirectionLabels: Record<string, string> = {
+  FWD: "Favorável à aprendizagem",
+  REV: "Desfavorável à aprendizagem",
+};
+
+/** Só FWD conta como favorável. */
+export function isFavorablePractice(direction: string | null): boolean {
+  return direction === "FWD";
+}
+
+/**
+ * Sinalizações da importação. Só o código abaixo é conhecido; os demais vêm
+ * livres da planilha, então o fallback é honesto sobre não estar traduzido
+ * em vez de fingir trocando underscores por espaços.
+ */
+export const applicationFlagLabels: Record<string, string> = {
+  vinculo_prova_disciplina_diverge:
+    "Disciplina da prova diferente da disciplina da candidatura",
+};
+
+export function flagLabel(code: string): string {
+  return applicationFlagLabels[code] ?? `Sinalização da importação: ${code}`;
+}
+
+export const actionErrorMessages: Record<string, string> = {
+  sem_permissao:
+    "Seu perfil é de consulta e não registra alterações. Fale com a administração.",
+  nota_invalida: "Digite um número. Use vírgula para o decimal, como 7,5.",
+  nota_fora_da_faixa: "A nota precisa estar entre 0 e 10.",
+  candidatura_invalida: "Esta candidatura não existe mais. Recarregue a página.",
+  dimensao_invalida: "Esta dimensão não existe mais. Recarregue a página.",
+  avaliacao_de_outro_avaliador:
+    "Esta avaliação é de outro avaliador. Você só pode editar a sua.",
+  conflito_de_versao:
+    "O conteúdo mudou em outro dispositivo. Recarregue antes de salvar.",
+  nota_rapida_muito_longa:
+    "A nota rápida precisa caber em 120 caracteres. Ela é lida de relance no ranking — o texto longo vai em Observações internas.",
+  email_dominio_invalido:
+    "Só entram e-mails @liceujardim.com.br ou @liceujardim.pro.br.",
+  email_duplicado: "Esta pessoa já está na equipe.",
+  nome_obrigatorio: "Informe o nome completo.",
+  nao_pode_alterar_a_si:
+    "Você não altera o próprio acesso. Peça a outro administrador.",
+  ultimo_admin:
+    "Precisa restar pelo menos um administrador ativo. Promova outra pessoa antes.",
+  usuario_invalido: "Esta pessoa não está mais na equipe. Recarregue a página.",
+  erro_inesperado: "Não conseguimos salvar. Tente de novo.",
+};
+
 export function labelFor(
   map: Record<string, string>,
   key: string | null | undefined,

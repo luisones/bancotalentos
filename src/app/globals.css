@@ -2,65 +2,94 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
+/*
+  Sem dark mode por decisão. A variante fica declarada porque os primitivos
+  shadcn vendored contêm classes `dark:` — removê-la quebra a compilação.
+  As utilities `dark:` são inertes: nenhum token `.dark` é definido.
+*/
 @custom-variant dark (&:is(.dark *));
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-source-sans), ui-sans-serif, system-ui, sans-serif;
-  --font-heading: var(--font-archivo), ui-sans-serif, system-ui, sans-serif;
-  --font-mono: ui-monospace, monospace;
-  --color-sidebar-ring: var(--sidebar-ring);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar: var(--sidebar);
-  --color-chart-5: var(--chart-5);
-  --color-chart-4: var(--chart-4);
-  --color-chart-3: var(--chart-3);
-  --color-chart-2: var(--chart-2);
-  --color-chart-1: var(--chart-1);
-  --color-ring: var(--ring);
-  --color-input: var(--input);
-  --color-border: var(--border);
-  --color-destructive: var(--destructive);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-accent: var(--accent);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-muted: var(--muted);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-secondary: var(--secondary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-primary: var(--primary);
-  --color-popover-foreground: var(--popover-foreground);
-  --color-popover: var(--popover);
-  --color-card-foreground: var(--card-foreground);
-  --color-card: var(--card);
-  --radius-sm: calc(var(--radius) * 0.6);
-  --radius-md: calc(var(--radius) * 0.8);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) * 1.4);
-  --radius-2xl: calc(var(--radius) * 1.8);
-  --radius-3xl: calc(var(--radius) * 2.2);
-  --radius-4xl: calc(var(--radius) * 2.6);
-}
-
+/* ==========================================================================
+   Paleta crua — fonte da verdade. Todo hex do sistema nasce aqui.
+   Extraída de refs_visuais/Dashboard do Aluno.dc.html.
+   ========================================================================== */
 :root {
+  /* Marca */
   --liceu-navy: #0b3053;
   --liceu-navy-hover: #16456f;
+  /* Gold TINTA SOBRE NAVY. Ilegível sobre superfície clara. */
   --liceu-gold: #e3c39d;
+  /* Gold para qualquer coisa sobre superfície clara. Nunca intercambiável. */
   --liceu-gold-text: #b98a4e;
-  --liceu-bg: #f1efea;
-  --liceu-card: #ffffff;
-  --liceu-border: #e2ddd4;
-  --liceu-text: #172026;
-  --liceu-muted: #6e7378;
-  --liceu-subtle: #9aa0a5;
 
-  --background: var(--liceu-bg);
+  /* Superfícies bege, por profundidade */
+  --liceu-ground: #f1efea;
+  --liceu-card: #ffffff;
+  --liceu-row-hover: #fbfaf8;
+  --liceu-sunken: #fafaf7;
+  /* rule-strong é usado como BORDER e como BACKGROUND atrás de gap:1px.
+     Se virarem tokens diferentes, KPI strip e bordas de card divergem. */
+  --liceu-rule-strong: #e2ddd4;
+  --liceu-rule: #efebe3;
+  --liceu-rule-weak: #f5f2ec;
+  --liceu-chip-bg: #f4f2ed;
+  --liceu-chip-border: #e6e1d8;
+
+  /* Texto, 5 níveis */
+  --liceu-text: #172026;
+  --liceu-ink-2: #2b3237;
+  --liceu-ink-3: #4c5257;
+  --liceu-muted: #6e7378;
+  --liceu-label: #8b9096;
+  --liceu-subtle: #9aa0a5;
+  /* Só para glifos separadores (o "/" do breadcrumb). NÃO usar em texto. */
+  --liceu-faint: #b9bdbf;
+
+  /* Escala semântica — sempre consumida como trio cor/fundo/borda */
+  --liceu-alert: #9e3b2c;
+  --liceu-alert-bg: #faf0ee;
+  --liceu-alert-border: #edd9d4;
+  --liceu-positive: #2f6b4f;
+  --liceu-positive-bg: #eef5f1;
+  --liceu-positive-border: #d3e5da;
+  --liceu-info: #0b3053;
+  --liceu-info-bg: #eef3f8;
+  --liceu-info-border: #d5dee6;
+  --liceu-gold-bg: #f7f5f1;
+  --liceu-gold-border: #e6dccc;
+  --liceu-gold-bg-hover: #f2ede4;
+  --liceu-neutral: #6e7378;
+  --liceu-neutral-bg: #f5f2ec;
+  --liceu-neutral-border: #efebe3;
+
+  /* Controles — borda FRIA, só em botão secundário. Card usa a quente. */
+  --liceu-btn-border: #c9d2db;
+  --liceu-btn-hover-bg: #f4f7fa;
+  --liceu-overlay: rgb(11 26 40 / 0.55);
+  --liceu-hairline-on-navy: rgb(227 195 157 / 0.35);
+  --liceu-nav-idle: rgb(255 255 255 / 0.6);
+  --liceu-whatsapp: #25d366;
+
+  /* Gramática de radius, por papel do componente */
+  --liceu-radius-bar: 1px;
+  --liceu-radius-chip: 2px;
+  --liceu-radius-panel: 3px;
+
+  /* Layout */
+  --liceu-header-h: 58px;
+  --liceu-rail-w: 336px;
+  --liceu-max: 1560px;
+  --liceu-measure: 720px;
+  --liceu-spine-w: 5px;
+  --liceu-spine-h: 40px;
+
+  /* Densidade: um token move a UI toda entre celular e desktop.
+     Sobrescrito na media query no fim deste arquivo. */
+  --liceu-row-py: 0.75rem;
+  --liceu-dense: 13px;
+
+  /* --- mapeamento shadcn --- */
+  --background: var(--liceu-ground);
   --foreground: var(--liceu-text);
   --card: var(--liceu-card);
   --card-foreground: var(--liceu-text);
@@ -68,30 +97,160 @@
   --popover-foreground: var(--liceu-text);
   --primary: var(--liceu-navy);
   --primary-foreground: #ffffff;
-  --secondary: #e8e4dc;
+  --secondary: var(--liceu-chip-bg);
   --secondary-foreground: var(--liceu-navy);
-  --muted: #e8e4dc;
+  --muted: var(--liceu-rule-weak);
   --muted-foreground: var(--liceu-muted);
   --accent: var(--liceu-gold);
   --accent-foreground: var(--liceu-navy);
-  --destructive: #c0392b;
-  --border: var(--liceu-border);
-  --input: var(--liceu-border);
+  /* Era #c0392b: vermelho saturado de viés frio, estranho a este sistema
+     morno. A referência tem exatamente um tom de alerta. */
+  --destructive: var(--liceu-alert);
+  --border: var(--liceu-rule-strong);
+  --input: var(--liceu-rule-strong);
   --ring: var(--liceu-navy);
-  --radius: 0.1875rem;
-  --chart-1: var(--liceu-navy);
-  --chart-2: var(--liceu-gold);
-  --chart-3: var(--liceu-gold-text);
-  --chart-4: var(--liceu-muted);
-  --chart-5: var(--liceu-subtle);
-  --sidebar: var(--liceu-navy);
-  --sidebar-foreground: var(--liceu-gold);
-  --sidebar-primary: var(--liceu-gold);
-  --sidebar-primary-foreground: var(--liceu-navy);
-  --sidebar-accent: var(--liceu-navy-hover);
-  --sidebar-accent-foreground: #ffffff;
-  --sidebar-border: var(--liceu-navy-hover);
-  --sidebar-ring: var(--liceu-gold);
+  --radius: var(--liceu-radius-panel);
+}
+
+@theme inline {
+  /* Marca */
+  --color-navy: var(--liceu-navy);
+  --color-navy-hover: var(--liceu-navy-hover);
+  --color-gold: var(--liceu-gold);
+  --color-gold-text: var(--liceu-gold-text);
+
+  /* Superfícies */
+  --color-ground: var(--liceu-ground);
+  --color-row-hover: var(--liceu-row-hover);
+  --color-sunken: var(--liceu-sunken);
+  --color-rule-strong: var(--liceu-rule-strong);
+  --color-rule: var(--liceu-rule);
+  --color-rule-weak: var(--liceu-rule-weak);
+  --color-chip-bg: var(--liceu-chip-bg);
+  --color-chip-border: var(--liceu-chip-border);
+
+  /* Texto */
+  --color-ink: var(--liceu-text);
+  --color-ink-2: var(--liceu-ink-2);
+  --color-ink-3: var(--liceu-ink-3);
+  --color-label: var(--liceu-label);
+  --color-subtle: var(--liceu-subtle);
+  --color-faint: var(--liceu-faint);
+
+  /* Semântica */
+  --color-alert: var(--liceu-alert);
+  --color-alert-bg: var(--liceu-alert-bg);
+  --color-alert-border: var(--liceu-alert-border);
+  --color-positive: var(--liceu-positive);
+  --color-positive-bg: var(--liceu-positive-bg);
+  --color-positive-border: var(--liceu-positive-border);
+  --color-info: var(--liceu-info);
+  --color-info-bg: var(--liceu-info-bg);
+  --color-info-border: var(--liceu-info-border);
+  --color-gold-bg: var(--liceu-gold-bg);
+  --color-gold-border: var(--liceu-gold-border);
+  --color-gold-bg-hover: var(--liceu-gold-bg-hover);
+  --color-neutral-fg: var(--liceu-neutral);
+  --color-neutral-bg: var(--liceu-neutral-bg);
+  --color-neutral-border: var(--liceu-neutral-border);
+
+  /* Controles */
+  --color-btn-border: var(--liceu-btn-border);
+  --color-btn-hover-bg: var(--liceu-btn-hover-bg);
+  --color-overlay: var(--liceu-overlay);
+  --color-hairline-on-navy: var(--liceu-hairline-on-navy);
+  --color-nav-idle: var(--liceu-nav-idle);
+  --color-whatsapp: var(--liceu-whatsapp);
+
+  /* shadcn */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  /* Fontes */
+  --font-sans: var(--font-source-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-heading: var(--font-archivo), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: ui-monospace, monospace;
+
+  /*
+    Radius por papel. Os aliases do shadcn são remapeados para dentro da
+    gramática em vez de derivarem de calc(--radius * n) — que dava
+    badge (rounded-4xl) ~7.8px e card (rounded-xl) ~4.2px, drift visível.
+  */
+  --radius-bar: var(--liceu-radius-bar);
+  --radius-chip: var(--liceu-radius-chip);
+  --radius-panel: var(--liceu-radius-panel);
+  --radius-sm: var(--liceu-radius-chip);
+  --radius-md: var(--liceu-radius-chip);
+  --radius-lg: var(--liceu-radius-panel);
+  --radius-xl: var(--liceu-radius-panel);
+  --radius-2xl: var(--liceu-radius-panel);
+  --radius-3xl: var(--liceu-radius-panel);
+  --radius-4xl: var(--liceu-radius-panel);
+
+  /*
+    Escala tipográfica. Os tamanhos fracionários são a assinatura da
+    referência; text-[12.5px] espalhado garante drift.
+  */
+  --text-micro: 9.5px;
+  --text-micro--line-height: 1.2;
+  --text-eyebrow: 10.5px;
+  --text-eyebrow--line-height: 1.2;
+  --text-meta: 11px;
+  --text-meta--line-height: 1.35;
+  /* Renomeado de "label" para não colidir com --color-label em text-*. */
+  --text-tag: 11.5px;
+  --text-tag--line-height: 1.3;
+  --text-note: 12px;
+  --text-note--line-height: 1.35;
+  /* O tamanho de corpo desta UI. Escala com a densidade. */
+  --text-dense: var(--liceu-dense);
+  --text-dense--line-height: 1.4;
+  --text-cell: 13px;
+  --text-cell--line-height: 1.35;
+  --text-row: 13.5px;
+  --text-row--line-height: 1.3;
+  --text-title-sm: 15px;
+  --text-title-sm--line-height: 1.2;
+  --text-title: 17px;
+  --text-title--line-height: 1.2;
+  --text-display-sm: 21px;
+  --text-display-sm--line-height: 1.15;
+  --text-metric: 27px;
+  --text-metric--line-height: 1;
+  /* Bloco de iniciais do card de identidade. */
+  --text-initials: 34px;
+  --text-initials--line-height: 1;
+  --text-h1: clamp(23px, 2.1vw, 33px);
+  --text-h1--line-height: 1.05;
+
+  --tracking-eyebrow: 0.14em;
+  --tracking-micro: 0.12em;
+  --tracking-badge: 0.1em;
+
+  /* Layout como spacing, para h-header / w-rail / max-w-shell */
+  --spacing-header: var(--liceu-header-h);
+  --spacing-rail: var(--liceu-rail-w);
+  --spacing-shell: var(--liceu-max);
+  --spacing-measure: var(--liceu-measure);
+  --spacing-spine-w: var(--liceu-spine-w);
+  --spacing-spine-h: var(--liceu-spine-h);
+  --spacing-row-y: var(--liceu-row-py);
 }
 
 @layer base {
@@ -112,42 +271,73 @@
   h6 {
     font-family: var(--font-heading);
   }
+  /* Toda tabela e todo KPI da referência usa numerais tabulares. */
+  table,
+  [data-numeric] {
+    font-variant-numeric: tabular-nums;
+  }
 }
 
+/*
+  SHIM DEPRECIADO. Estas classes são o sistema de superfície antigo, agora
+  reescrito sobre os tokens novos para as páginas ainda não migradas não
+  perderem estilo entre as fases. Substituídas por <Panel>, <KpiStrip> e
+  <DataGrid>; remover este bloco quando o último consumidor sair (fim da
+  migração de páginas). Não usar em código novo.
+*/
 @layer components {
   .liceu-card {
-    @apply rounded-[3px] border border-[var(--liceu-border)] bg-[var(--liceu-card)];
+    @apply rounded-panel border border-rule-strong bg-card;
   }
-
   .liceu-kpi-strip {
-    @apply grid grid-cols-2 gap-px overflow-hidden rounded-[3px] border border-[var(--liceu-border)] bg-[var(--liceu-border)] sm:grid-cols-4;
+    @apply grid grid-cols-2 gap-px overflow-hidden rounded-panel border border-rule-strong bg-rule-strong sm:grid-cols-4;
   }
-
   .liceu-kpi {
-    @apply flex flex-col gap-1 bg-[var(--liceu-card)] px-4 py-3;
+    @apply flex flex-col gap-1 bg-card px-4 py-3;
   }
-
   .liceu-kpi-label {
-    @apply text-xs font-medium uppercase tracking-wide text-[var(--liceu-gold-text)];
+    @apply text-eyebrow font-bold uppercase tracking-badge text-gold-text;
   }
-
   .liceu-kpi-value {
-    @apply font-heading text-2xl font-bold text-[var(--liceu-navy)];
+    @apply font-heading text-metric font-bold tabular-nums text-navy;
   }
-
   .liceu-table thead {
-    @apply bg-[var(--liceu-navy)] text-[var(--liceu-gold)];
+    @apply bg-navy text-gold;
   }
-
   .liceu-table th {
-    @apply px-3 py-2 text-left text-xs font-medium uppercase tracking-wide;
+    @apply text-micro px-3 py-2 text-left font-bold uppercase tracking-micro;
   }
-
   .liceu-table td {
-    @apply border-b border-[var(--liceu-border)] px-3 py-2 text-sm;
+    @apply text-cell border-b border-rule-weak px-3 py-row-y;
   }
-
   .liceu-table tbody tr:hover {
-    @apply bg-[var(--liceu-bg)];
+    @apply bg-row-hover;
+  }
+}
+
+/*
+  Densidade: um ponto mais folgado e uma fonte maior no celular; a densidade
+  da referência a partir de md. Mesmo layout, zero mudança de componente.
+*/
+@media (min-width: 768px) {
+  :root {
+    --liceu-row-py: 0.625rem;
+    --liceu-dense: 12.5px;
+  }
+}
+
+@media print {
+  :root {
+    --liceu-ground: #ffffff;
+  }
+  [data-print-hidden] {
+    display: none !important;
+  }
+  /* Nenhuma seção do acordeão pode sair fechada no papel. */
+  [data-section-body][hidden] {
+    display: block !important;
+  }
+  [data-section] {
+    break-inside: avoid;
   }
 }

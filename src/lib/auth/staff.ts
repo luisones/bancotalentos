@@ -1,6 +1,7 @@
 import { eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth/server";
+import { isAllowedEmailDomain } from "@/lib/auth/domains";
 import { db, staffUsers } from "@/lib/db";
 
 export type StaffRole = "admin" | "avaliador" | "consulta";
@@ -12,16 +13,7 @@ export type StaffUser = {
   role: StaffRole;
 };
 
-const ALLOWED_DOMAINS = (
-  process.env.ALLOWED_EMAIL_DOMAINS ?? "liceujardim.com.br,liceujardim.pro.br"
-)
-  .split(",")
-  .map((d) => d.trim().toLowerCase());
-
-export function isAllowedEmailDomain(email: string): boolean {
-  const domain = email.split("@")[1]?.toLowerCase();
-  return Boolean(domain && ALLOWED_DOMAINS.includes(domain));
-}
+export { isAllowedEmailDomain };
 
 export async function getSession() {
   const { data } = await auth.getSession();

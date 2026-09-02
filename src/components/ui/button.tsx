@@ -19,6 +19,10 @@ const buttonVariants = cva(
         destructive:
           "bg-destructive/10 text-destructive hover:bg-destructive/20 focus-visible:border-destructive/40 focus-visible:ring-destructive/20 dark:bg-destructive/20 dark:hover:bg-destructive/30 dark:focus-visible:ring-destructive/40",
         link: "text-primary underline-offset-4 hover:underline",
+        // Gold = ações que produzem um juízo humano ou um documento
+        // (Avaliar, Montar impressão, Registrar parecer). Sem essa regra a
+        // variante gold vira "o botão bonito".
+        gold: "border-gold-border bg-gold-bg text-gold-text hover:bg-gold-bg-hover",
       },
       size: {
         default:
@@ -32,6 +36,9 @@ const buttonVariants = cva(
         "icon-sm":
           "size-7 rounded-[min(var(--radius-md),12px)] in-data-[slot=button-group]:rounded-lg",
         "icon-lg": "size-9",
+        // Pilha vertical do card de identidade: é um menu, não uma toolbar.
+        stack:
+          "h-auto justify-start gap-2 px-[18px] py-3 font-heading text-cell",
       },
     },
     defaultVariants: {

@@ -70,6 +70,30 @@ export function computeFinalCont(obj: number, disc: number) {
   return (obj + 2 * disc) / 3;
 }
 
+const LLM_WEIGHTS: Record<string, number> = {
+  L: 0.5,
+  G: 0.15,
+  A: 0.175,
+  O: 0.175,
+};
+
+/** Ensemble QnF: renormalized over present LLM providers (scale 0–30). */
+export function computeQnF(
+  scores: Partial<Record<"L" | "G" | "A" | "O", number | null>>,
+): number | null {
+  let weightSum = 0;
+  let weightedSum = 0;
+  for (const provider of ["L", "G", "A", "O"] as const) {
+    const score = scores[provider];
+    if (score === null || score === undefined) continue;
+    const w = LLM_WEIGHTS[provider];
+    weightSum += w;
+    weightedSum += w * score;
+  }
+  if (weightSum === 0) return null;
+  return weightedSum / weightSum;
+}
+
 export function formatScore(value: number | null, digits = 1): string {
   if (value === null || Number.isNaN(value)) return "—";
   return value.toLocaleString("pt-BR", {
@@ -108,33 +132,51 @@ export type AssembleScoresInput = {
   lessonTestScore: number | null;
   staffUserId?: string;
   forceReveal?: boolean;
+  /** Códigos de dimensão que o usuário revelou nesta candidatura. */
+  peekedDimensionCodes?: ReadonlySet<string>;
 };
 
+/**
+ * O avaliador vê as notas dos colegas se já registrou a própria, ou se
+ * revelou explicitamente (peek auditado).
+ *
+ * O `hasPeeked` anterior lia `blindPeekedAt` nas linhas do PRÓPRIO avaliador,
+ * o que exigia ele já ter uma avaliação — e nesse caso `hasOwn` já era
+ * verdadeiro. Era código morto: quem não avaliou nunca conseguia revelar.
+ * Agora o peek vem de `blind_peeks`, registro próprio e independente.
+ */
 export function canSeePeerEvaluations(
-  evals: Pick<ScoreEvalInput, "evaluatorStaffId" | "blindPeekedAt">[],
+  evals: Pick<ScoreEvalInput, "evaluatorStaffId">[],
   staffUserId: string,
+  /** Dimensões que este usuário revelou nesta candidatura. */
+  peekedDimensionCodes?: ReadonlySet<string>,
+  dimensionCode?: string,
 ): boolean {
   const hasOwn = evals.some((e) => e.evaluatorStaffId === staffUserId);
-  const hasPeeked = evals.some(
-    (e) => e.evaluatorStaffId === staffUserId && e.blindPeekedAt,
-  );
-  return hasOwn || hasPeeked;
+  if (hasOwn) return true;
+  if (!peekedDimensionCodes) return false;
+  // Sem dimensão informada, basta ter revelado qualquer uma.
+  return dimensionCode
+    ? peekedDimensionCodes.has(dimensionCode)
+    : peekedDimensionCodes.size > 0;
 }
 
 /** Pure consolidado: avaliações individuais > importado; dimensão ausente não vira zero. */
 export function assembleDimensionScores(
   input: AssembleScoresInput,
 ): ConsolidatedResult {
-  const revealPeers =
-    input.forceReveal ||
-    !input.staffUserId ||
-    canSeePeerEvaluations(input.evals, input.staffUserId);
+  const staffUserId = input.staffUserId;
+  const alwaysReveal = input.forceReveal || !staffUserId;
 
   const dimensionScores: DimensionScore[] = input.dimensionCodes.map((code) => {
     const dimEvals = input.evals.filter((e) => e.dimensionCode === code);
+    // A cegueira é POR DIMENSÃO: avaliar uma não revela as outras.
+    const revealPeers =
+      alwaysReveal ||
+      canSeePeerEvaluations(dimEvals, staffUserId!, input.peekedDimensionCodes, code);
     const visibleEvals = revealPeers
       ? dimEvals
-      : dimEvals.filter((e) => e.evaluatorStaffId === input.staffUserId);
+      : dimEvals.filter((e) => e.evaluatorStaffId === staffUserId);
     const evalScores = visibleEvals.map((e) =>
       normalizeScore(Number(e.scoreRaw), Number(e.scaleMax)),
     );

@@ -1,41 +1,42 @@
 import { notFound } from "next/navigation";
-import { ProfileTabs } from "@/components/candidate/profile-tabs";
-import { canWrite, requireStaff } from "@/lib/auth/staff";
+import { CandidateProfile } from "@/components/candidate/profile";
+import { requireStaff } from "@/lib/auth/staff";
+import { buildProfileViewModel } from "@/lib/candidate/view-model";
 import { getCandidateProfile } from "@/lib/queries/candidate";
 import {
   getRankingNeighborIds,
   type RankingFilters,
 } from "@/lib/queries/ranking";
 
-type PageProps = {
-  params: Promise<{ id: string }>;
-  searchParams: Promise<Record<string, string | string[] | undefined>>;
-};
-
 export default async function CandidateProfilePage({
   params,
   searchParams,
-}: PageProps) {
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const staff = await requireStaff();
   const { id } = await params;
   const query = await searchParams;
+  const str = (k: string) =>
+    typeof query[k] === "string" ? (query[k] as string) : undefined;
 
   const profile = await getCandidateProfile(id, staff.id);
   if (!profile) notFound();
 
   const rankingFilters: RankingFilters = {
-    campaign: typeof query.campaign === "string" ? query.campaign : undefined,
-    discipline:
-      typeof query.discipline === "string" ? query.discipline : undefined,
-    search: typeof query.search === "string" ? query.search : undefined,
-    sort: typeof query.sort === "string" ? query.sort : "score",
-    order: typeof query.order === "string" ? query.order : "desc",
+    campaign: str("campaign"),
+    discipline: str("discipline"),
+    search: str("search"),
+    sort: str("sort") ?? "score",
+    order: str("order") ?? "desc",
   };
 
   const rankingQuery = new URLSearchParams(
-    Object.fromEntries(
-      Object.entries(rankingFilters).filter(([, v]) => v !== undefined),
-    ) as Record<string, string>,
+    Object.entries(rankingFilters).filter(([, v]) => v !== undefined) as [
+      string,
+      string,
+    ][],
   ).toString();
 
   const neighbors =
@@ -43,40 +44,18 @@ export default async function CandidateProfilePage({
       ? await getRankingNeighborIds(id, rankingFilters, staff.id)
       : { prevId: null, nextId: null };
 
-  const primaryAppId = profile.primaryApp?.id;
-  const primaryDocs = primaryAppId
-    ? profile.documentsByApp[primaryAppId] ?? []
-    : [];
-  const primaryScores = primaryAppId
-    ? profile.scoresByApp[primaryAppId] ?? null
-    : null;
-  const primaryEvals = primaryAppId
-    ? profile.evalsByApp[primaryAppId] ?? []
-    : [];
+  // Toda derivação acontece no servidor: a página é útil antes de qualquer JS.
+  const vm = buildProfileViewModel({
+    profile,
+    staff,
+    focusedApplicationId: str("candidatura"),
+    openSectionId: str("abrir"),
+  });
 
   return (
-    <ProfileTabs
-      candidate={profile.candidate}
-      primaryApp={profile.primaryApp}
-      applications={profile.applications}
-      documents={primaryDocs}
-      scores={primaryScores}
-      evaluations={primaryEvals}
-      subjectiveAnswers={profile.subjectiveAnswers}
-      schedules={profile.schedules}
-      lessonTests={profile.lessonTests}
-      practiceScores={profile.practiceScores}
-      interests={profile.interests}
-      potentials={profile.potentials}
-      tags={profile.tags}
-      notes={profile.notes}
-      contacts={profile.contacts}
-      history={profile.history}
-      dimensions={profile.dimensions}
-      canWrite={canWrite(staff)}
-      staffUserId={staff.id}
-      prevId={neighbors.prevId}
-      nextId={neighbors.nextId}
+    <CandidateProfile
+      vm={vm}
+      neighbors={neighbors}
       rankingQuery={rankingQuery}
     />
   );

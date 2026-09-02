@@ -6,6 +6,7 @@ import {
   computeAprObj,
   computeConsolidated,
   computeFinalCont,
+  computeQnF,
   normalizeScore,
 } from "./scoring";
 
@@ -25,6 +26,21 @@ describe("scoring", () => {
 
   it("computes FINAL CONT", () => {
     expect(computeFinalCont(9, 5.5)).toBeCloseTo(6.6667, 3);
+  });
+
+  it("computes QnF ensemble with renormalization", () => {
+    const all = computeQnF({ L: 2, G: 4, A: 9, O: 7 });
+    expect(all).toBeCloseTo(4.4, 1);
+    const withoutL = computeQnF({ G: 11, A: 15, O: 12 });
+    expect(withoutL).toBeCloseTo(12.75, 2);
+    expect(computeQnF({ L: 0, G: 10, A: 10, O: 10 })).toBeCloseTo(5, 2);
+    expect(computeQnF({})).toBeNull();
+  });
+
+  it("averages lesson-test scores per evaluator then across evaluators", () => {
+    const evaluatorA = average([8, 10, 6, 9]);
+    const evaluatorB = average([7, 9, 8, 10]);
+    expect(average([evaluatorA!, evaluatorB!])).toBeCloseTo(8.375, 3);
   });
 
   it("renormalizes weights when dimensions missing", () => {

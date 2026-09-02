@@ -1,80 +1,78 @@
 import Image from "next/image";
 import Link from "next/link";
-import { getStaffUser, isAdmin } from "@/lib/auth/staff";
-import { cn } from "@/lib/utils";
+import { GlobalSearch } from "@/components/liceu/global-search";
+import { canWrite, getStaffUser, isAdmin } from "@/lib/auth/staff";
+import { HeaderMobileNav } from "./header-mobile-nav";
+import { HeaderNav, type NavItem } from "./header-nav";
+import { HeaderUserMenu } from "./header-user-menu";
 
-const navItems = [
-  { href: "/", label: "Dashboard" },
+const navItems: NavItem[] = [
+  { href: "/", label: "Painel" },
   { href: "/ranking", label: "Ranking" },
   { href: "/comparar", label: "Comparar" },
 ];
 
-const adminItems = [
+const adminNavItems: NavItem[] = [
   { href: "/admin/candidatos/novo", label: "Novo candidato" },
   { href: "/admin/pesos", label: "Pesos" },
-  { href: "/admin/usuarios", label: "Usuários" },
+  { href: "/admin/usuarios", label: "Gerenciar usuários" },
 ];
 
+/**
+ * Header continua Server Component: os itens de admin são filtrados por papel
+ * aqui, então as rotas de admin nem chegam ao bundle de um perfil `consulta`.
+ * A rota ativa é resolvida por <HeaderNav>, o único pedaço que é cliente.
+ */
 export async function AppHeader() {
   const staff = await getStaffUser();
+  const admin = staff ? isAdmin(staff) : false;
+  const adminItems = admin ? adminNavItems : [];
 
   return (
-    <header className="sticky top-0 z-50 h-[60px] border-b border-[var(--liceu-navy-hover)] bg-[var(--liceu-navy)]">
-      <div className="mx-auto flex h-full max-w-[1180px] items-center justify-between px-4">
-        <div className="flex items-center gap-8">
-          <Link href="/" className="flex items-center gap-3">
+    <header
+      data-print-hidden
+      className="sticky top-0 z-50 h-header border-b border-navy-hover bg-navy"
+    >
+      <div className="mx-auto flex h-full max-w-shell items-center justify-between gap-4 px-4 md:px-6 xl:px-[30px]">
+        <div className="flex min-w-0 items-center gap-5">
+          <Link href="/" className="flex shrink-0 items-center">
             <Image
               src="/logo-liceu-bege.png"
               alt="Liceu Jardim"
               width={120}
-              height={32}
-              className="h-8 w-auto"
+              height={27}
+              className="h-[27px] w-auto"
               priority
             />
           </Link>
-          <nav className="hidden items-center gap-1 md:flex">
-            {navItems.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className="rounded px-3 py-1.5 text-sm font-medium text-[var(--liceu-gold)] transition-colors hover:bg-[var(--liceu-navy-hover)] hover:text-white"
-              >
-                {item.label}
-              </Link>
-            ))}
-            {staff && isAdmin(staff) && (
-              <div className="ml-2 flex items-center gap-1 border-l border-[var(--liceu-navy-hover)] pl-4">
-                <span className="mr-1 text-xs uppercase tracking-wide text-[var(--liceu-gold)]/70">
-                  Admin
-                </span>
-                {adminItems.map((item) => (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    className="rounded px-3 py-1.5 text-sm font-medium text-[var(--liceu-gold)] transition-colors hover:bg-[var(--liceu-navy-hover)] hover:text-white"
-                  >
-                    {item.label}
-                  </Link>
-                ))}
-              </div>
-            )}
-          </nav>
+          <span
+            aria-hidden
+            className="hidden h-[22px] w-px bg-hairline-on-navy lg:block"
+          />
+          <span className="font-heading text-eyebrow hidden shrink-0 font-bold uppercase tracking-eyebrow text-gold lg:block">
+            Banco de Talentos
+          </span>
+          <HeaderNav items={navItems} adminItems={adminItems} />
         </div>
-        {staff && (
-          <div className="flex items-center gap-3">
-            <span className="hidden text-sm text-[var(--liceu-gold)] sm:inline">
-              {staff.name}
-            </span>
-            <span
-              className={cn(
-                "rounded px-2 py-0.5 text-xs font-medium uppercase tracking-wide",
-                "bg-[var(--liceu-navy-hover)] text-[var(--liceu-gold)]",
-              )}
-            >
-              {staff.role}
-            </span>
-          </div>
-        )}
+
+        <div className="flex shrink-0 items-center gap-3">
+          {staff && <GlobalSearch />}
+          {staff && (
+            <div className="hidden md:block">
+              <HeaderUserMenu
+                name={staff.name}
+                role={staff.role}
+                canWrite={canWrite(staff)}
+                isAdmin={admin}
+              />
+            </div>
+          )}
+          <HeaderMobileNav
+            items={navItems}
+            adminItems={adminItems}
+            staff={staff ? { name: staff.name, role: staff.role } : null}
+          />
+        </div>
       </div>
     </header>
   );
