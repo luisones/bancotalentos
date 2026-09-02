@@ -86,3 +86,72 @@ export function formatCoveragePercent(coverage: number, total: number): string {
   if (total === 0) return "0%";
   return `${Math.round((coverage / total) * 100)}%`;
 }
+
+export type ScoreEvalInput = {
+  dimensionCode: string;
+  scoreRaw: string | number;
+  scaleMax: string | number;
+  evaluatorStaffId: string;
+  blindPeekedAt: Date | null;
+};
+
+export type ScoreImportedInput = {
+  dimensionCode: string;
+  score: string | number;
+};
+
+export type AssembleScoresInput = {
+  dimensionCodes: string[];
+  weights: Record<string, number>;
+  evals: ScoreEvalInput[];
+  imported: ScoreImportedInput[];
+  lessonTestScore: number | null;
+  staffUserId?: string;
+  forceReveal?: boolean;
+};
+
+export function canSeePeerEvaluations(
+  evals: Pick<ScoreEvalInput, "evaluatorStaffId" | "blindPeekedAt">[],
+  staffUserId: string,
+): boolean {
+  const hasOwn = evals.some((e) => e.evaluatorStaffId === staffUserId);
+  const hasPeeked = evals.some(
+    (e) => e.evaluatorStaffId === staffUserId && e.blindPeekedAt,
+  );
+  return hasOwn || hasPeeked;
+}
+
+/** Pure consolidado: avaliações individuais > importado; dimensão ausente não vira zero. */
+export function assembleDimensionScores(
+  input: AssembleScoresInput,
+): ConsolidatedResult {
+  const revealPeers =
+    input.forceReveal ||
+    !input.staffUserId ||
+    canSeePeerEvaluations(input.evals, input.staffUserId);
+
+  const dimensionScores: DimensionScore[] = input.dimensionCodes.map((code) => {
+    const dimEvals = input.evals.filter((e) => e.dimensionCode === code);
+    const visibleEvals = revealPeers
+      ? dimEvals
+      : dimEvals.filter((e) => e.evaluatorStaffId === input.staffUserId);
+    const evalScores = visibleEvals.map((e) =>
+      normalizeScore(Number(e.scoreRaw), Number(e.scaleMax)),
+    );
+
+    const imp = input.imported.find((i) => i.dimensionCode === code);
+
+    let score: number | null = null;
+    if (code === "aula_teste" && input.lessonTestScore !== null) {
+      score = input.lessonTestScore;
+    } else if (evalScores.length > 0) {
+      score = average(evalScores);
+    } else if (imp) {
+      score = Number(imp.score);
+    }
+
+    return { code, score, evaluatorCount: dimEvals.length };
+  });
+
+  return computeConsolidated(dimensionScores, input.weights);
+}

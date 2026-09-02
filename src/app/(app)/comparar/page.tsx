@@ -1,11 +1,11 @@
 import Link from "next/link";
+import { desc, eq, inArray } from "drizzle-orm";
 import { requireStaff } from "@/lib/auth/staff";
-import { dimensionLabels, labelFor } from "@/lib/labels";
-import { getCandidatesByIds } from "@/lib/queries/candidate";
-import { buildDimensionScoresForApplication } from "@/lib/queries/scoring-data";
 import { db } from "@/lib/db";
 import { applications } from "@/lib/db/schema";
-import { eq } from "drizzle-orm";
+import { dimensionLabels, labelFor } from "@/lib/labels";
+import { getCandidatesByIds } from "@/lib/queries/candidate";
+import { buildDimensionScoresForApplications } from "@/lib/queries/scoring-data";
 import { formatScore } from "@/lib/scoring";
 
 type PageProps = {
@@ -19,22 +19,39 @@ export default async function CompararPage({ searchParams }: PageProps) {
   const ids = idsParam.split(",").filter(Boolean).slice(0, 5);
 
   const candidates = await getCandidatesByIds(ids);
+  const candidateIds = candidates.map((c) => c.id);
 
-  const candidateData = await Promise.all(
-    candidates.map(async (c) => {
-      const [app] = await db
-        .select()
-        .from(applications)
-        .where(eq(applications.candidateId, c.id))
-        .limit(1);
-      const scores = app
-        ? await buildDimensionScoresForApplication(app.id, {
-            staffUserId: staff.id,
+  const apps =
+    candidateIds.length === 0
+      ? []
+      : await db
+          .select({
+            id: applications.id,
+            candidateId: applications.candidateId,
           })
-        : null;
-      return { candidate: c, scores };
-    }),
+          .from(applications)
+          .where(inArray(applications.candidateId, candidateIds))
+          .orderBy(desc(applications.appliedAt));
+
+  const primaryAppIdByCandidate = new Map<string, string>();
+  for (const app of apps) {
+    if (!primaryAppIdByCandidate.has(app.candidateId)) {
+      primaryAppIdByCandidate.set(app.candidateId, app.id);
+    }
+  }
+
+  const scoreMap = await buildDimensionScoresForApplications(
+    [...primaryAppIdByCandidate.values()],
+    { staffUserId: staff.id },
   );
+
+  const candidateData = candidates.map((c) => {
+    const appId = primaryAppIdByCandidate.get(c.id);
+    return {
+      candidate: c,
+      scores: appId ? (scoreMap.get(appId) ?? null) : null,
+    };
+  });
 
   return (
     <div className="space-y-6">

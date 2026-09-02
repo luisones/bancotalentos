@@ -1,4 +1,4 @@
-import { desc, eq } from "drizzle-orm";
+import { desc, eq, inArray } from "drizzle-orm";
 import { db } from "@/lib/db";
 import {
   applicationInterests,
@@ -25,9 +25,11 @@ import {
   teachingPracticeScores,
 } from "@/lib/db/schema";
 import {
-  buildDimensionScoresForApplication,
-  getApplicationEvaluations,
+  buildDimensionScoresForApplications,
+  getApplicationEvaluationsForApplications,
+  type EvaluationRow,
 } from "./scoring-data";
+import type { ConsolidatedResult } from "@/lib/scoring";
 
 export async function getCandidateProfile(candidateId: string, staffUserId: string) {
   const [candidate] = await db
@@ -53,55 +55,63 @@ export async function getCandidateProfile(candidateId: string, staffUserId: stri
   const applicationIds = candidateApplications.map((a) => a.application.id);
 
   const docsByApp: Record<string, (typeof documents.$inferSelect)[]> = {};
+  const scoresByApp: Record<string, ConsolidatedResult> = {};
+  const evalsByApp: Record<string, EvaluationRow[]> = {};
+
   if (applicationIds.length > 0) {
-    for (const appId of applicationIds) {
-      docsByApp[appId] = await db
+    const [allDocs, scoreMap, evalMap] = await Promise.all([
+      db
         .select()
         .from(documents)
-        .where(eq(documents.applicationId, appId));
+        .where(inArray(documents.applicationId, applicationIds)),
+      buildDimensionScoresForApplications(applicationIds, { staffUserId }),
+      getApplicationEvaluationsForApplications(applicationIds),
+    ]);
+
+    for (const doc of allDocs) {
+      const list = docsByApp[doc.applicationId] ?? [];
+      list.push(doc);
+      docsByApp[doc.applicationId] = list;
+    }
+    for (const appId of applicationIds) {
+      const scores = scoreMap.get(appId);
+      if (scores) scoresByApp[appId] = scores;
+      evalsByApp[appId] = evalMap.get(appId) ?? [];
     }
   }
 
-  const scoresByApp: Record<string, Awaited<ReturnType<typeof buildDimensionScoresForApplication>>> = {};
-  const evalsByApp: Record<string, Awaited<ReturnType<typeof getApplicationEvaluations>>> = {};
-
-  for (const appId of applicationIds) {
-    scoresByApp[appId] = await buildDimensionScoresForApplication(appId, {
-      staffUserId,
-    });
-    evalsByApp[appId] = await getApplicationEvaluations(appId);
-  }
-
-  const candidateNotes = await db
-    .select({
-      note: notes,
-      staffName: staffUsers.name,
-    })
-    .from(notes)
-    .leftJoin(staffUsers, eq(staffUsers.id, notes.staffId))
-    .where(eq(notes.candidateId, candidateId))
-    .orderBy(desc(notes.createdAt));
-
-  const candidateContacts = await db
-    .select({
-      contact: contacts,
-      staffName: staffUsers.name,
-    })
-    .from(contacts)
-    .leftJoin(staffUsers, eq(staffUsers.id, contacts.staffId))
-    .where(eq(contacts.candidateId, candidateId))
-    .orderBy(desc(contacts.contactedAt));
-
-  const history = await db
-    .select({
-      event: auditEvents,
-      staffName: staffUsers.name,
-    })
-    .from(auditEvents)
-    .leftJoin(staffUsers, eq(staffUsers.id, auditEvents.staffId))
-    .where(eq(auditEvents.entityId, candidateId))
-    .orderBy(desc(auditEvents.createdAt))
-    .limit(50);
+  const [candidateNotes, candidateContacts, history, allDimensions] =
+    await Promise.all([
+      db
+        .select({
+          note: notes,
+          staffName: staffUsers.name,
+        })
+        .from(notes)
+        .leftJoin(staffUsers, eq(staffUsers.id, notes.staffId))
+        .where(eq(notes.candidateId, candidateId))
+        .orderBy(desc(notes.createdAt)),
+      db
+        .select({
+          contact: contacts,
+          staffName: staffUsers.name,
+        })
+        .from(contacts)
+        .leftJoin(staffUsers, eq(staffUsers.id, contacts.staffId))
+        .where(eq(contacts.candidateId, candidateId))
+        .orderBy(desc(contacts.contactedAt)),
+      db
+        .select({
+          event: auditEvents,
+          staffName: staffUsers.name,
+        })
+        .from(auditEvents)
+        .leftJoin(staffUsers, eq(staffUsers.id, auditEvents.staffId))
+        .where(eq(auditEvents.entityId, candidateId))
+        .orderBy(desc(auditEvents.createdAt))
+        .limit(50),
+      db.select().from(dimensions).orderBy(dimensions.sortOrder),
+    ]);
 
   const primaryApp = candidateApplications[0]?.application;
 
@@ -118,30 +128,88 @@ export async function getCandidateProfile(candidateId: string, staffUserId: stri
     }>;
   }> = [];
   let practiceScores: Array<typeof teachingPracticeScores.$inferSelect> = [];
-  let interests: Array<{ disciplineName: string | null; segmentName: string | null }> = [];
-  let potentials: Array<{ disciplineName: string | null; segmentName: string | null }> = [];
+  let interests: Array<{
+    disciplineName: string | null;
+    segmentName: string | null;
+  }> = [];
+  let potentials: Array<{
+    disciplineName: string | null;
+    segmentName: string | null;
+  }> = [];
   let appTags: Array<{ name: string; slug: string }> = [];
 
   if (primaryApp) {
-    subjectiveAnswersData = await db
-      .select({ answer: subjectiveAnswers, instrument: instruments })
-      .from(subjectiveAnswers)
-      .innerJoin(instruments, eq(instruments.id, subjectiveAnswers.instrumentId))
-      .where(eq(subjectiveAnswers.applicationId, primaryApp.id));
-
-    schedulesData = await db
-      .select()
-      .from(schedules)
-      .where(eq(schedules.applicationId, primaryApp.id));
-
-    const lessonEvals = await db
-      .select()
-      .from(lessonTestEvaluations)
-      .where(eq(lessonTestEvaluations.applicationId, primaryApp.id));
-
-    for (const le of lessonEvals) {
-      const scores = await db
+    const [
+      subjectiveRows,
+      scheduleRows,
+      lessonEvals,
+      practiceRows,
+      interestRows,
+      potentialRows,
+      tagRows,
+    ] = await Promise.all([
+      db
+        .select({ answer: subjectiveAnswers, instrument: instruments })
+        .from(subjectiveAnswers)
+        .innerJoin(
+          instruments,
+          eq(instruments.id, subjectiveAnswers.instrumentId),
+        )
+        .where(eq(subjectiveAnswers.applicationId, primaryApp.id)),
+      db
+        .select()
+        .from(schedules)
+        .where(eq(schedules.applicationId, primaryApp.id)),
+      db
+        .select()
+        .from(lessonTestEvaluations)
+        .where(eq(lessonTestEvaluations.applicationId, primaryApp.id)),
+      db
+        .select()
+        .from(teachingPracticeScores)
+        .where(eq(teachingPracticeScores.applicationId, primaryApp.id)),
+      db
         .select({
+          disciplineName: disciplines.name,
+          segmentName: segments.name,
+        })
+        .from(applicationInterests)
+        .leftJoin(
+          disciplines,
+          eq(disciplines.id, applicationInterests.disciplineId),
+        )
+        .leftJoin(segments, eq(segments.id, applicationInterests.segmentId))
+        .where(eq(applicationInterests.applicationId, primaryApp.id)),
+      db
+        .select({
+          disciplineName: disciplines.name,
+          segmentName: segments.name,
+        })
+        .from(applicationPotentials)
+        .leftJoin(
+          disciplines,
+          eq(disciplines.id, applicationPotentials.disciplineId),
+        )
+        .leftJoin(segments, eq(segments.id, applicationPotentials.segmentId))
+        .where(eq(applicationPotentials.applicationId, primaryApp.id)),
+      db
+        .select({ name: tags.name, slug: tags.slug })
+        .from(applicationTags)
+        .innerJoin(tags, eq(tags.id, applicationTags.tagId))
+        .where(eq(applicationTags.applicationId, primaryApp.id)),
+    ]);
+
+    subjectiveAnswersData = subjectiveRows;
+    schedulesData = scheduleRows;
+    practiceScores = practiceRows;
+    interests = interestRows;
+    potentials = potentialRows;
+    appTags = tagRows;
+
+    if (lessonEvals.length > 0) {
+      const scoreRows = await db
+        .select({
+          evaluationId: lessonTestScores.lessonTestEvaluationId,
           criterion: lessonTestCriteria,
           score: lessonTestScores.score,
         })
@@ -150,46 +218,30 @@ export async function getCandidateProfile(candidateId: string, staffUserId: stri
           lessonTestCriteria,
           eq(lessonTestCriteria.id, lessonTestScores.criterionId),
         )
-        .where(eq(lessonTestScores.lessonTestEvaluationId, le.id));
-      lessonTests.push({ evaluation: le, scores });
+        .where(
+          inArray(
+            lessonTestScores.lessonTestEvaluationId,
+            lessonEvals.map((le) => le.id),
+          ),
+        );
+
+      const scoresByEval = new Map<
+        string,
+        Array<{ criterion: typeof lessonTestCriteria.$inferSelect; score: string }>
+      >();
+      for (const row of scoreRows) {
+        const list = scoresByEval.get(row.evaluationId) ?? [];
+        list.push({ criterion: row.criterion, score: row.score });
+        scoresByEval.set(row.evaluationId, list);
+      }
+      for (const le of lessonEvals) {
+        lessonTests.push({
+          evaluation: le,
+          scores: scoresByEval.get(le.id) ?? [],
+        });
+      }
     }
-
-    practiceScores = await db
-      .select()
-      .from(teachingPracticeScores)
-      .where(eq(teachingPracticeScores.applicationId, primaryApp.id));
-
-    interests = await db
-      .select({
-        disciplineName: disciplines.name,
-        segmentName: segments.name,
-      })
-      .from(applicationInterests)
-      .leftJoin(disciplines, eq(disciplines.id, applicationInterests.disciplineId))
-      .leftJoin(segments, eq(segments.id, applicationInterests.segmentId))
-      .where(eq(applicationInterests.applicationId, primaryApp.id));
-
-    potentials = await db
-      .select({
-        disciplineName: disciplines.name,
-        segmentName: segments.name,
-      })
-      .from(applicationPotentials)
-      .leftJoin(disciplines, eq(disciplines.id, applicationPotentials.disciplineId))
-      .leftJoin(segments, eq(segments.id, applicationPotentials.segmentId))
-      .where(eq(applicationPotentials.applicationId, primaryApp.id));
-
-    appTags = await db
-      .select({ name: tags.name, slug: tags.slug })
-      .from(applicationTags)
-      .innerJoin(tags, eq(tags.id, applicationTags.tagId))
-      .where(eq(applicationTags.applicationId, primaryApp.id));
   }
-
-  const allDimensions = await db
-    .select()
-    .from(dimensions)
-    .orderBy(dimensions.sortOrder);
 
   return {
     candidate,
@@ -214,14 +266,12 @@ export async function getCandidateProfile(candidateId: string, staffUserId: stri
 
 export async function getCandidatesByIds(ids: string[]) {
   if (ids.length === 0) return [];
-  const results = [];
-  for (const id of ids) {
-    const [candidate] = await db
-      .select()
-      .from(candidates)
-      .where(eq(candidates.id, id))
-      .limit(1);
-    if (candidate) results.push(candidate);
-  }
-  return results;
+  const rows = await db
+    .select()
+    .from(candidates)
+    .where(inArray(candidates.id, ids));
+  const byId = new Map(rows.map((c) => [c.id, c]));
+  return ids
+    .map((id) => byId.get(id))
+    .filter((c): c is NonNullable<typeof c> => Boolean(c));
 }

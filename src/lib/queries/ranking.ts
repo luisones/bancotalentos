@@ -7,7 +7,10 @@ import {
   disciplines,
 } from "@/lib/db/schema";
 import { formatCoverage } from "@/lib/scoring";
-import { buildDimensionScoresForApplication } from "./scoring-data";
+import {
+  assembleScoresForApplications,
+  prefetchScoringData,
+} from "./scoring-data";
 
 export type RankingFilters = {
   campaign?: string;
@@ -53,6 +56,9 @@ export async function getRankingRows(
     );
   }
 
+  const prefetchAll =
+    conditions.length === 0 ? prefetchScoringData() : null;
+
   const rows = await db
     .select({
       applicationId: applications.id,
@@ -71,17 +77,27 @@ export async function getRankingRows(
     .where(conditions.length > 0 ? and(...conditions) : undefined)
     .orderBy(desc(applications.appliedAt));
 
-  const withScores: RankingRow[] = [];
-  for (const row of rows) {
-    const result = await buildDimensionScoresForApplication(row.applicationId, {
-      staffUserId,
-    });
-    withScores.push({
+  const applicationIds = rows.map((row) => row.applicationId);
+  const [catalog, inputs] = prefetchAll
+    ? await prefetchAll
+    : await prefetchScoringData(applicationIds);
+  const scoresByApp = assembleScoresForApplications(
+    applicationIds,
+    catalog,
+    inputs,
+    { staffUserId },
+  );
+
+  const withScores: RankingRow[] = rows.map((row) => {
+    const result = scoresByApp.get(row.applicationId);
+    return {
       ...row,
-      consolidated: result.consolidated,
-      coverage: formatCoverage(result.coverage, result.totalDimensions),
-    });
-  }
+      consolidated: result?.consolidated ?? null,
+      coverage: result
+        ? formatCoverage(result.coverage, result.totalDimensions)
+        : "0/0",
+    };
+  });
 
   const sort = filters.sort ?? "score";
   const order = filters.order ?? "desc";

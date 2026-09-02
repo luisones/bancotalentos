@@ -31,45 +31,39 @@ export type Pendencia = {
 };
 
 export async function getDashboardStats(): Promise<DashboardStats> {
-  const [candidateResult] = await db.select({ value: count() }).from(candidates);
-  const [applicationResult] = await db
-    .select({ value: count() })
-    .from(applications);
-  const [pendingResult] = await db
-    .select({ value: count() })
-    .from(applications)
-    .where(
-      sql`${applications.operationalStatus} IN ('novo', 'avaliacao_pendente', 'aguardando_contato')`,
-    );
+  const [candidateResult, applicationResult, pendingResult] = await Promise.all(
+    [
+      db.select({ value: count() }).from(candidates),
+      db.select({ value: count() }).from(applications),
+      db
+        .select({ value: count() })
+        .from(applications)
+        .where(
+          sql`${applications.operationalStatus} IN ('novo', 'avaliacao_pendente', 'aguardando_contato')`,
+        ),
+    ],
+  );
 
   return {
-    candidateCount: candidateResult?.value ?? 0,
-    applicationCount: applicationResult?.value ?? 0,
-    pendingCount: pendingResult?.value ?? 0,
+    candidateCount: candidateResult[0]?.value ?? 0,
+    applicationCount: applicationResult[0]?.value ?? 0,
+    pendingCount: pendingResult[0]?.value ?? 0,
   };
 }
 
 export async function getCampaignCards(): Promise<CampaignCard[]> {
-  const allCampaigns = await db
-    .select()
+  return db
+    .select({
+      id: campaigns.id,
+      name: campaigns.name,
+      slug: campaigns.slug,
+      status: campaigns.status,
+      applicationCount: count(applications.id),
+    })
     .from(campaigns)
+    .leftJoin(applications, eq(applications.campaignId, campaigns.id))
+    .groupBy(campaigns.id)
     .orderBy(desc(campaigns.createdAt));
-
-  const cards: CampaignCard[] = [];
-  for (const campaign of allCampaigns) {
-    const [appCount] = await db
-      .select({ value: count() })
-      .from(applications)
-      .where(eq(applications.campaignId, campaign.id));
-    cards.push({
-      id: campaign.id,
-      name: campaign.name,
-      slug: campaign.slug,
-      status: campaign.status,
-      applicationCount: appCount?.value ?? 0,
-    });
-  }
-  return cards;
 }
 
 export async function getPendencias(limit = 10): Promise<Pendencia[]> {

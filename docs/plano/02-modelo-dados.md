@@ -77,7 +77,12 @@ Entrevista/aula-teste: `application_id`, `type`, `scheduled_at`, `location`, `re
 
 ## Índices
 
-- `applications(campaign_id, selective_status, operational_status)`
-- `candidates(email)`, `candidates(drive_cv_id)`
-- `evaluations(application_id, dimension_id, evaluator_staff_id)` unique
-- `staff_users(email)` unique
+- `applications(candidate_id)`, `applications(campaign_id)`, `applications(discipline_id)`, `applications(operational_status)`
+- `imported_dimension_scores(application_id)`
+- `documents(application_id)`, `subjective_answers(application_id)`, `teaching_practice_scores(application_id)`
+- `lesson_test_evaluations(application_id)`, `lesson_test_scores(lesson_test_evaluation_id)`
+- `notes(candidate_id)`, `contacts(candidate_id)`, `audit_events(entity_id)`
+- `application_interests(application_id)`, `application_potentials(application_id)`, `application_tags(application_id)`
+- `schedules(application_id)`, `weight_config_items(weight_config_id)`
+- `evaluations(application_id, dimension_id, instrument_id, evaluator_staff_id)` unique
+- `candidates(drive_cv_id)` unique, `staff_users(email)` unique

@@ -8,6 +8,13 @@
       "when": 1788281261599,
       "tag": "0000_black_invaders",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1788290644632,
+      "tag": "0001_query_indexes",
+      "breakpoints": true
     }
   ]
 }

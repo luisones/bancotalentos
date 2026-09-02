@@ -1,5 +1,6 @@
 import {
   boolean,
+  index,
   integer,
   jsonb,
   numeric,
@@ -187,62 +188,83 @@ export const candidates = pgTable(
   (t) => [uniqueIndex("candidates_drive_cv_id_idx").on(t.driveCvId)],
 );
 
-export const applications = pgTable("applications", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  candidateId: uuid("candidate_id")
-    .references(() => candidates.id)
-    .notNull(),
-  campaignId: uuid("campaign_id").references(() => campaigns.id),
-  disciplineId: uuid("discipline_id").references(() => disciplines.id),
-  operationalStatus: operationalStatusEnum("operational_status")
-    .notNull()
-    .default("novo"),
-  selectiveStatus: selectiveStatusEnum("selective_status")
-    .notNull()
-    .default("em_avaliacao"),
-  appliedAt: timestamp("applied_at", { withTimezone: true }),
-  source: applicationSourceEnum("source").notNull().default("manual"),
-  candidateObservation: text("candidate_observation"),
-  differentialText: text("differential_text"),
-  createdAt: timestamp("created_at", { withTimezone: true })
-    .defaultNow()
-    .notNull(),
-  updatedAt: timestamp("updated_at", { withTimezone: true })
-    .defaultNow()
-    .notNull(),
-});
+export const applications = pgTable(
+  "applications",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    candidateId: uuid("candidate_id")
+      .references(() => candidates.id)
+      .notNull(),
+    campaignId: uuid("campaign_id").references(() => campaigns.id),
+    disciplineId: uuid("discipline_id").references(() => disciplines.id),
+    operationalStatus: operationalStatusEnum("operational_status")
+      .notNull()
+      .default("novo"),
+    selectiveStatus: selectiveStatusEnum("selective_status")
+      .notNull()
+      .default("em_avaliacao"),
+    appliedAt: timestamp("applied_at", { withTimezone: true }),
+    source: applicationSourceEnum("source").notNull().default("manual"),
+    candidateObservation: text("candidate_observation"),
+    differentialText: text("differential_text"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => [
+    index("applications_candidate_id_idx").on(t.candidateId),
+    index("applications_campaign_id_idx").on(t.campaignId),
+    index("applications_discipline_id_idx").on(t.disciplineId),
+    index("applications_operational_status_idx").on(t.operationalStatus),
+  ],
+);
 
-export const applicationInterests = pgTable("application_interests", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  applicationId: uuid("application_id")
-    .references(() => applications.id)
-    .notNull(),
-  disciplineId: uuid("discipline_id").references(() => disciplines.id),
-  segmentId: uuid("segment_id").references(() => segments.id),
-});
+export const applicationInterests = pgTable(
+  "application_interests",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    applicationId: uuid("application_id")
+      .references(() => applications.id)
+      .notNull(),
+    disciplineId: uuid("discipline_id").references(() => disciplines.id),
+    segmentId: uuid("segment_id").references(() => segments.id),
+  },
+  (t) => [index("application_interests_application_id_idx").on(t.applicationId)],
+);
 
-export const applicationPotentials = pgTable("application_potentials", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  applicationId: uuid("application_id")
-    .references(() => applications.id)
-    .notNull(),
-  disciplineId: uuid("discipline_id").references(() => disciplines.id),
-  segmentId: uuid("segment_id").references(() => segments.id),
-});
+export const applicationPotentials = pgTable(
+  "application_potentials",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    applicationId: uuid("application_id")
+      .references(() => applications.id)
+      .notNull(),
+    disciplineId: uuid("discipline_id").references(() => disciplines.id),
+    segmentId: uuid("segment_id").references(() => segments.id),
+  },
+  (t) => [index("application_potentials_application_id_idx").on(t.applicationId)],
+);
 
-export const documents = pgTable("documents", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  applicationId: uuid("application_id")
-    .references(() => applications.id)
-    .notNull(),
-  type: documentTypeEnum("type").notNull(),
-  url: text("url").notNull(),
-  description: text("description"),
-  documentDate: timestamp("document_date", { withTimezone: true }),
-  createdAt: timestamp("created_at", { withTimezone: true })
-    .defaultNow()
-    .notNull(),
-});
+export const documents = pgTable(
+  "documents",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    applicationId: uuid("application_id")
+      .references(() => applications.id)
+      .notNull(),
+    type: documentTypeEnum("type").notNull(),
+    url: text("url").notNull(),
+    description: text("description"),
+    documentDate: timestamp("document_date", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => [index("documents_application_id_idx").on(t.applicationId)],
+);
 
 export const dimensions = pgTable("dimensions", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -264,16 +286,20 @@ export const instruments = pgTable("instruments", {
   needsSourceText: boolean("needs_source_text").notNull().default(false),
 });
 
-export const subjectiveAnswers = pgTable("subjective_answers", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  applicationId: uuid("application_id")
-    .references(() => applications.id)
-    .notNull(),
-  instrumentId: uuid("instrument_id")
-    .references(() => instruments.id)
-    .notNull(),
-  answerText: text("answer_text"),
-});
+export const subjectiveAnswers = pgTable(
+  "subjective_answers",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    applicationId: uuid("application_id")
+      .references(() => applications.id)
+      .notNull(),
+    instrumentId: uuid("instrument_id")
+      .references(() => instruments.id)
+      .notNull(),
+    answerText: text("answer_text"),
+  },
+  (t) => [index("subjective_answers_application_id_idx").on(t.applicationId)],
+);
 
 export const evaluations = pgTable(
   "evaluations",
@@ -342,26 +368,38 @@ export const llmEvaluations = pgTable("llm_evaluations", {
     .notNull(),
 });
 
-export const teachingPracticeScores = pgTable("teaching_practice_scores", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  applicationId: uuid("application_id")
-    .references(() => applications.id)
-    .notNull(),
-  practiceCode: text("practice_code").notNull(),
-  scoreRaw: numeric("score_raw", { precision: 8, scale: 4 }).notNull(),
-});
+export const teachingPracticeScores = pgTable(
+  "teaching_practice_scores",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    applicationId: uuid("application_id")
+      .references(() => applications.id)
+      .notNull(),
+    practiceCode: text("practice_code").notNull(),
+    scoreRaw: numeric("score_raw", { precision: 8, scale: 4 }).notNull(),
+  },
+  (t) => [
+    index("teaching_practice_scores_application_id_idx").on(t.applicationId),
+  ],
+);
 
-export const importedDimensionScores = pgTable("imported_dimension_scores", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  applicationId: uuid("application_id")
-    .references(() => applications.id)
-    .notNull(),
-  dimensionId: uuid("dimension_id")
-    .references(() => dimensions.id)
-    .notNull(),
-  score: numeric("score", { precision: 8, scale: 4 }).notNull(),
-  source: text("source").notNull().default("planilha_2025"),
-});
+export const importedDimensionScores = pgTable(
+  "imported_dimension_scores",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    applicationId: uuid("application_id")
+      .references(() => applications.id)
+      .notNull(),
+    dimensionId: uuid("dimension_id")
+      .references(() => dimensions.id)
+      .notNull(),
+    score: numeric("score", { precision: 8, scale: 4 }).notNull(),
+    source: text("source").notNull().default("planilha_2025"),
+  },
+  (t) => [
+    index("imported_dimension_scores_application_id_idx").on(t.applicationId),
+  ],
+);
 
 export const lessonTestCriteria = pgTable("lesson_test_criteria", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -370,32 +408,44 @@ export const lessonTestCriteria = pgTable("lesson_test_criteria", {
   sortOrder: integer("sort_order").notNull().default(0),
 });
 
-export const lessonTestEvaluations = pgTable("lesson_test_evaluations", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  applicationId: uuid("application_id")
-    .references(() => applications.id)
-    .notNull(),
-  evaluatorStaffId: uuid("evaluator_staff_id")
-    .references(() => staffUsers.id)
-    .notNull(),
-  vacancyLabel: text("vacancy_label"),
-  comment: text("comment"),
-  evaluatedAt: timestamp("evaluated_at", { withTimezone: true }),
-  createdAt: timestamp("created_at", { withTimezone: true })
-    .defaultNow()
-    .notNull(),
-});
+export const lessonTestEvaluations = pgTable(
+  "lesson_test_evaluations",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    applicationId: uuid("application_id")
+      .references(() => applications.id)
+      .notNull(),
+    evaluatorStaffId: uuid("evaluator_staff_id")
+      .references(() => staffUsers.id)
+      .notNull(),
+    vacancyLabel: text("vacancy_label"),
+    comment: text("comment"),
+    evaluatedAt: timestamp("evaluated_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => [
+    index("lesson_test_evaluations_application_id_idx").on(t.applicationId),
+  ],
+);
 
-export const lessonTestScores = pgTable("lesson_test_scores", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  lessonTestEvaluationId: uuid("lesson_test_evaluation_id")
-    .references(() => lessonTestEvaluations.id)
-    .notNull(),
-  criterionId: uuid("criterion_id")
-    .references(() => lessonTestCriteria.id)
-    .notNull(),
-  score: numeric("score", { precision: 8, scale: 4 }).notNull(),
-});
+export const lessonTestScores = pgTable(
+  "lesson_test_scores",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    lessonTestEvaluationId: uuid("lesson_test_evaluation_id")
+      .references(() => lessonTestEvaluations.id)
+      .notNull(),
+    criterionId: uuid("criterion_id")
+      .references(() => lessonTestCriteria.id)
+      .notNull(),
+    score: numeric("score", { precision: 8, scale: 4 }).notNull(),
+  },
+  (t) => [
+    index("lesson_test_scores_eval_id_idx").on(t.lessonTestEvaluationId),
+  ],
+);
 
 export const unmatchedLessonTests = pgTable("unmatched_lesson_tests", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -408,37 +458,45 @@ export const unmatchedLessonTests = pgTable("unmatched_lesson_tests", {
     .notNull(),
 });
 
-export const contacts = pgTable("contacts", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  candidateId: uuid("candidate_id").references(() => candidates.id),
-  applicationId: uuid("application_id").references(() => applications.id),
-  staffId: uuid("staff_id")
-    .references(() => staffUsers.id)
-    .notNull(),
-  contactedAt: timestamp("contacted_at", { withTimezone: true })
-    .defaultNow()
-    .notNull(),
-  channel: contactChannelEnum("channel").notNull(),
-  result: contactResultEnum("result").notNull(),
-  note: text("note"),
-  createdAt: timestamp("created_at", { withTimezone: true })
-    .defaultNow()
-    .notNull(),
-});
+export const contacts = pgTable(
+  "contacts",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    candidateId: uuid("candidate_id").references(() => candidates.id),
+    applicationId: uuid("application_id").references(() => applications.id),
+    staffId: uuid("staff_id")
+      .references(() => staffUsers.id)
+      .notNull(),
+    contactedAt: timestamp("contacted_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    channel: contactChannelEnum("channel").notNull(),
+    result: contactResultEnum("result").notNull(),
+    note: text("note"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => [index("contacts_candidate_id_idx").on(t.candidateId)],
+);
 
-export const notes = pgTable("notes", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  candidateId: uuid("candidate_id").references(() => candidates.id),
-  applicationId: uuid("application_id").references(() => applications.id),
-  staffId: uuid("staff_id")
-    .references(() => staffUsers.id)
-    .notNull(),
-  body: text("body").notNull(),
-  isHighlighted: boolean("is_highlighted").notNull().default(false),
-  createdAt: timestamp("created_at", { withTimezone: true })
-    .defaultNow()
-    .notNull(),
-});
+export const notes = pgTable(
+  "notes",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    candidateId: uuid("candidate_id").references(() => candidates.id),
+    applicationId: uuid("application_id").references(() => applications.id),
+    staffId: uuid("staff_id")
+      .references(() => staffUsers.id)
+      .notNull(),
+    body: text("body").notNull(),
+    isHighlighted: boolean("is_highlighted").notNull().default(false),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => [index("notes_candidate_id_idx").on(t.candidateId)],
+);
 
 export const tags = pgTable("tags", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -446,15 +504,19 @@ export const tags = pgTable("tags", {
   slug: text("slug").notNull().unique(),
 });
 
-export const applicationTags = pgTable("application_tags", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  applicationId: uuid("application_id")
-    .references(() => applications.id)
-    .notNull(),
-  tagId: uuid("tag_id")
-    .references(() => tags.id)
-    .notNull(),
-});
+export const applicationTags = pgTable(
+  "application_tags",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    applicationId: uuid("application_id")
+      .references(() => applications.id)
+      .notNull(),
+    tagId: uuid("tag_id")
+      .references(() => tags.id)
+      .notNull(),
+  },
+  (t) => [index("application_tags_application_id_idx").on(t.applicationId)],
+);
 
 export const applicationFlags = pgTable("application_flags", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -465,23 +527,27 @@ export const applicationFlags = pgTable("application_flags", {
   active: boolean("active").notNull().default(true),
 });
 
-export const schedules = pgTable("schedules", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  applicationId: uuid("application_id")
-    .references(() => applications.id)
-    .notNull(),
-  type: scheduleTypeEnum("type").notNull(),
-  scheduledAt: timestamp("scheduled_at", { withTimezone: true }),
-  location: text("location"),
-  responsibleStaffId: uuid("responsible_staff_id").references(
-    () => staffUsers.id,
-  ),
-  status: scheduleStatusEnum("status").notNull().default("a_agendar"),
-  notes: text("notes"),
-  createdAt: timestamp("created_at", { withTimezone: true })
-    .defaultNow()
-    .notNull(),
-});
+export const schedules = pgTable(
+  "schedules",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    applicationId: uuid("application_id")
+      .references(() => applications.id)
+      .notNull(),
+    type: scheduleTypeEnum("type").notNull(),
+    scheduledAt: timestamp("scheduled_at", { withTimezone: true }),
+    location: text("location"),
+    responsibleStaffId: uuid("responsible_staff_id").references(
+      () => staffUsers.id,
+    ),
+    status: scheduleStatusEnum("status").notNull().default("a_agendar"),
+    notes: text("notes"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => [index("schedules_application_id_idx").on(t.applicationId)],
+);
 
 export const weightConfigs = pgTable("weight_configs", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -492,16 +558,20 @@ export const weightConfigs = pgTable("weight_configs", {
   createdByStaffId: uuid("created_by_staff_id").references(() => staffUsers.id),
 });
 
-export const weightConfigItems = pgTable("weight_config_items", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  weightConfigId: uuid("weight_config_id")
-    .references(() => weightConfigs.id)
-    .notNull(),
-  dimensionId: uuid("dimension_id")
-    .references(() => dimensions.id)
-    .notNull(),
-  weight: numeric("weight", { precision: 6, scale: 4 }).notNull(),
-});
+export const weightConfigItems = pgTable(
+  "weight_config_items",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    weightConfigId: uuid("weight_config_id")
+      .references(() => weightConfigs.id)
+      .notNull(),
+    dimensionId: uuid("dimension_id")
+      .references(() => dimensions.id)
+      .notNull(),
+    weight: numeric("weight", { precision: 6, scale: 4 }).notNull(),
+  },
+  (t) => [index("weight_config_items_config_id_idx").on(t.weightConfigId)],
+);
 
 export const importBatches = pgTable("import_batches", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -537,14 +607,18 @@ export const candidateMergeSuggestions = pgTable("candidate_merge_suggestions", 
   resolved: boolean("resolved").notNull().default(false),
 });
 
-export const auditEvents = pgTable("audit_events", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  staffId: uuid("staff_id").references(() => staffUsers.id),
-  action: text("action").notNull(),
-  entityType: text("entity_type").notNull(),
-  entityId: text("entity_id"),
-  metadata: jsonb("metadata"),
-  createdAt: timestamp("created_at", { withTimezone: true })
-    .defaultNow()
-    .notNull(),
-});
+export const auditEvents = pgTable(
+  "audit_events",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    staffId: uuid("staff_id").references(() => staffUsers.id),
+    action: text("action").notNull(),
+    entityType: text("entity_type").notNull(),
+    entityId: text("entity_id"),
+    metadata: jsonb("metadata"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => [index("audit_events_entity_id_idx").on(t.entityId)],
+);
