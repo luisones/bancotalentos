@@ -44,7 +44,17 @@ Prática 4 (*Devolutiva Individualizada*): peso **1,5 FWD** (corrigido; planilha
 
 ## Abas dos workbooks
 
-`CANDIDATOS`, `CANDIDATURAS`, `DOCUMENTOS`, `RESPOSTAS`, `PRATICAS`, `AULAS_TESTE`, `SCORES_DIMENSAO`, `PROVAS` (2026), `SEGUNDA_FASE` (2026), `FLAGS_TAGS` (2026), `REJEITADOS`, `LEGENDA`
+`CANDIDATOS`, `CANDIDATURAS`, `DOCUMENTOS`, `RESPOSTAS`, `PRATICAS`, `AULAS_TESTE`, `SCORES_DIMENSAO`, `PROVAS` (2026), `SEGUNDA_FASE` (2026), `FLAGS_TAGS` (2026 — o OBS das abas de disciplina; o texto vira nota rápida em `candidates.highlighted_note`), `REJEITADOS`, `LEGENDA`
+
+## OBS 2026 → nota rápida
+
+Coluna `OBS` nas 14 abas de disciplina da planilha de resultados (não confundir com `Observações:` da aba oculta `VIDEOS`, que é texto do candidato e já está em `applications.candidate_observation`).
+
+- 31 anotações, 31 pessoas, todas ≤ 38 caracteres (cabem em `QUICK_NOTE_MAX` = 120)
+- Destino: `candidates.highlighted_note` (visível no Painel). Flags/tags/notas longas em `FLAGS_TAGS` continuam; a flag sozinha não aparece na UI.
+- Casa por `pessoa_id`. Uma linha sem `candidatura_id` mesmo assim recebe nota rápida.
+- PII: o texto é juízo da equipe; um caso cita terceiro. Ingestão identificada exige `--allow-pii`. Logs e `audit_events` do lote **não** guardam o corpo. A versão anonimizada já redige o terceiro.
+- Não sobrescreve nota rápida já escrita pela equipe.
 
 ## Dimensões no consolidado
 

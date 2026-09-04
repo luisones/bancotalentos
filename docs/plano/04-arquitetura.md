@@ -59,3 +59,5 @@ Agente usa MCP para: `create_project`, `apply_migration`, `run_sql`, `provision_
 - `DATABASE_URL` só servidor
 - `robots: noindex`
 - Audit log em alterações sensíveis
+- Planilhas IDENTIFICADO exigem `--allow-pii`; xlsx/csv ficam em `tmp/` (gitignored)
+- Lote de OBS → nota rápida: `audit_events.metadata` só tem contagens, nunca o texto

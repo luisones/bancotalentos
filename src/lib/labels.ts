@@ -118,6 +118,7 @@ export const auditActionLabels: Record<string, string> = {
   answer_override: "Nota de uma pergunta substituída",
   weights_updated: "Pesos do Resultado alterados",
   quick_note_updated: "Nota rápida alterada",
+  quick_notes_imported: "Notas rápidas importadas da planilha",
   blind_peek: "Avaliações dos colegas reveladas",
   blind_peek_dimension: "Avaliações dos colegas reveladas em uma dimensão",
   staff_created: "Pessoa incluída na equipe",

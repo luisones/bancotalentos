@@ -109,6 +109,7 @@ export type IngestStats = {
   flagsCreated: number;
   tagsCreated: number;
   notesCreated: number;
+  quickNotesImported: number;
   secondPhaseCreated: number;
   mergeSuggestionsCreated: number;
   errors: number;
@@ -135,6 +136,7 @@ export function emptyStats(): IngestStats {
     flagsCreated: 0,
     tagsCreated: 0,
     notesCreated: 0,
+    quickNotesImported: 0,
     secondPhaseCreated: 0,
     mergeSuggestionsCreated: 0,
     errors: 0,

@@ -17,7 +17,7 @@ UUID primários, `timestamptz` para datas. Drizzle schema em `lib/db/schema/`.
 `id`, `email` (citext unique), `name`, `role`, `active`, `neon_auth_user_id`, `created_at`
 
 ### candidates
-`id`, `external_ref` (unique, `PES-…`), `full_name`, `email`, `phone`, `city`, `english_level`, `origin`, `highlighted_note`, `talent_classification`, `drive_cv_id` (legado, sem unique), `created_at`, `updated_at`
+`id`, `external_ref` (unique, `PES-…`), `full_name`, `email`, `phone`, `city`, `english_level`, `origin`, `highlighted_note` (nota rápida; em 2026 vem do OBS da planilha de resultados), `talent_classification`, `drive_cv_id` (legado, sem unique), `created_at`, `updated_at`
 
 ### campaigns
 `id`, `name`, `slug`, `description`, `starts_at`, `ends_at`, `status`, `created_at`

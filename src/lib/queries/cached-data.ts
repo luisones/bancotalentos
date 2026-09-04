@@ -151,7 +151,7 @@ function isMissingIncrementalCache(err: unknown): boolean {
  */
 const cachedApplicationBase = unstable_cache(
   fetchApplicationBase,
-  ["application-base-v4"],
+  ["application-base-v5"],
   { tags: [APPLICATION_LIST_TAG], revalidate: 3600 },
 );
 

@@ -193,6 +193,7 @@ export function printDryRunSummary(
     if (count > 0) console.log(`  ${sheet}: ${count} rows`);
   }
   console.log(`  skipped candidaturas: ${stats.skippedCandidaturas}`);
+  console.log(`  notas rápidas (OBS): ${stats.quickNotesImported}`);
   console.log(
     `  MAE QnF: ${stats.maeQnF?.toExponential(3) ?? "n/a"} (${stats.maeQnFCount} rows)`,
   );

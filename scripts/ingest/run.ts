@@ -84,6 +84,7 @@ Gerado em ${now}${dryRun ? " (dry-run)" : ""}.
 | Aulas-teste (eval / scores) | ${stats.lessonTestEvaluationsCreated} / ${stats.lessonTestScoresCreated} |
 | 2ª fase | ${stats.secondPhaseCreated} |
 | Flags / tags / notas | ${stats.flagsCreated} / ${stats.tagsCreated} / ${stats.notesCreated} |
+| Notas rápidas (OBS) | ${stats.quickNotesImported} |
 | Merge suggestions | ${stats.mergeSuggestionsCreated} |
 | Candidaturas ignoradas | ${stats.skippedCandidaturas} |
 | Erros | ${stats.errors} |

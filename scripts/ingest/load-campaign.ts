@@ -16,6 +16,11 @@ import {
 import { hasLlmScore, validateAprObjRows, validateQnFRows } from "./scoring-check";
 import type { CampaignConfig, IngestStats, SheetRow, WorkbookData } from "./types";
 import { DISCIPLINE_FALLBACKS, emptyStats, safePayload } from "./types";
+import {
+  applyObsQuickNotes,
+  collectObsQuickNotes,
+  printObsApplyResult,
+} from "./obs-quick-notes";
 
 type Db = NeonHttpDatabase<typeof schema>;
 
@@ -871,7 +876,27 @@ async function getOrCreateTag(ctx: LoadContext, code: string): Promise<string> {
 }
 
 async function importFlagsTags(ctx: LoadContext, rows: SheetRow[]) {
+  // OBS é da pessoa. Coletar antes do continue por candidatura ausente —
+  // uma falta de prova ficou sem `candidatura_id` e mesmo assim precisa
+  // virar nota rápida.
+  const collected = collectObsQuickNotes(rows);
+  if (collected.byPessoa.size > 0) {
+    const applied = await applyObsQuickNotes(
+      ctx.db,
+      collected.byPessoa,
+      ctx.candidateByRef,
+      {
+        dryRun: ctx.dryRun,
+        skipExisting: true,
+        staffId: ctx.dryRun ? null : ctx.ingestStaffId,
+      },
+    );
+    ctx.stats.quickNotesImported = applied.imported;
+    printObsApplyResult(applied, ctx.dryRun);
+  }
+
   for (const row of rows) {
+    const pessoaId = cellText(row, "pessoa_id");
     const candidaturaId = cellText(row, "candidatura_id");
     const applicationId = candidaturaId
       ? ctx.applicationByRef.get(candidaturaId)
@@ -902,7 +927,11 @@ async function importFlagsTags(ctx: LoadContext, rows: SheetRow[]) {
     } else if (tipo === "nota" && texto) {
       ctx.stats.notesCreated += 1;
       if (ctx.dryRun) continue;
+      const candidateId = pessoaId
+        ? ctx.candidateByRef.get(pessoaId)
+        : undefined;
       await ctx.db.insert(schema.notes).values({
+        ...(candidateId ? { candidateId } : {}),
         applicationId,
         staffId: ctx.ingestStaffId,
         body: `[${codigo}] ${texto}`,
