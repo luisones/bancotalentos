@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { MicroHeader } from "@/components/liceu/surface";
-import { campaignTone, shortCampaignName } from "@/lib/campaign-color";
+import { shortCampaignName } from "@/lib/campaign-color";
 import { toneTinted, type Tone } from "@/lib/tone";
 import { cn } from "@/lib/utils";
 import { SearchField } from "./search-field";
@@ -21,11 +21,14 @@ export type FilterOption = { slug: string; name: string };
 export function PainelFilters({
   campaigns,
   disciplines,
+  campaignTones,
   active,
   hrefFor,
 }: {
   campaigns: FilterOption[];
   disciplines: FilterOption[];
+  /** Cor de cada campanha, a mesma que a tabela usa no chip da linha. */
+  campaignTones: Map<string, Tone>;
   active: { campaign?: string; discipline?: string; search?: string };
   /** Monta a URL trocando UM filtro e preservando o resto. */
   hrefFor: (patch: Record<string, string | undefined>) => string;
@@ -35,23 +38,46 @@ export function PainelFilters({
   );
 
   return (
-    <div className="rounded-panel border border-rule-strong bg-card">
-      <div className="flex flex-col gap-3 px-4 py-3">
-        <FilterRow label="Campanha">
-          <Pill href={hrefFor({ campaign: undefined })} active={!active.campaign}>
-            Todas
-          </Pill>
-          {campaigns.map((c) => (
+    <div className="rounded-panel border border-rule-strong bg-card px-4 py-3">
+      <div className="flex flex-col gap-2.5">
+        {/* Campanha e busca dividem a linha: são dois filtros curtos, e cada
+            linha a mais aqui é uma linha a menos de candidato na tela. */}
+        <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-2.5">
+          <FilterRow label="Campanha">
             <Pill
-              key={c.slug}
-              href={hrefFor({ campaign: c.slug })}
-              active={active.campaign === c.slug}
-              tone={campaignTone(c.slug)}
+              href={hrefFor({ campaign: undefined })}
+              active={!active.campaign}
             >
-              {shortCampaignName(c.name)}
+              Todas
             </Pill>
-          ))}
-        </FilterRow>
+            {campaigns.map((c) => (
+              <Pill
+                key={c.slug}
+                href={hrefFor({ campaign: c.slug })}
+                active={active.campaign === c.slug}
+                tone={campaignTones.get(c.slug)}
+              >
+                {shortCampaignName(c.name)}
+              </Pill>
+            ))}
+          </FilterRow>
+
+          <div className="flex items-center gap-3">
+            {hasFilters && (
+              <Link
+                href={hrefFor({
+                  campaign: undefined,
+                  discipline: undefined,
+                  search: undefined,
+                })}
+                className="text-note whitespace-nowrap font-semibold text-gold-text hover:underline"
+              >
+                Limpar filtros
+              </Link>
+            )}
+            <SearchField initial={active.search ?? ""} />
+          </div>
+        </div>
 
         <FilterRow label="Disciplina">
           <Pill
@@ -70,22 +96,6 @@ export function PainelFilters({
             </Pill>
           ))}
         </FilterRow>
-      </div>
-
-      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-rule px-4 py-2.5">
-        <SearchField initial={active.search ?? ""} />
-        {hasFilters && (
-          <Link
-            href={hrefFor({
-              campaign: undefined,
-              discipline: undefined,
-              search: undefined,
-            })}
-            className="text-note font-semibold text-gold-text hover:underline"
-          >
-            Limpar filtros
-          </Link>
-        )}
       </div>
     </div>
   );

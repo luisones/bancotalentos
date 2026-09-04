@@ -88,7 +88,7 @@ export function CandidateProfile({
 
       <ScoresPanel vm={vm} applicationId={focused?.applicationId ?? null} />
 
-      <MaterialsPanel vm={vm} />
+      <MaterialsPanel vm={vm} applicationId={focused?.applicationId ?? null} />
     </div>
   );
 }

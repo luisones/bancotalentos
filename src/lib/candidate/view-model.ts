@@ -1,4 +1,5 @@
 import { isAdmin, canWrite, type StaffUser } from "@/lib/auth/staff";
+import { shortCampaignName } from "@/lib/campaign-color";
 import { formatDate } from "@/lib/format";
 import {
   candidateStatusLabels,
@@ -114,7 +115,7 @@ export function buildProfileViewModel({
 
   const appId = focusedApp?.id ?? null;
   const scopeLabel = focusedApp
-    ? [focusedApp.campaignName, focusedApp.disciplineName]
+    ? [shortCampaignName(focusedApp.campaignName), focusedApp.disciplineName]
         .filter(Boolean)
         .join(" · ")
     : "";
@@ -166,6 +167,7 @@ export function buildProfileViewModel({
   const groupCard = (
     groupCode: string,
     memberCodes: string[],
+    emptyHint: string,
   ): ScoreCard => {
     const score = scores[groupCode] ?? null;
     return {
@@ -179,7 +181,7 @@ export function buildProfileViewModel({
       dimensionId: null,
       own: null,
       hiddenPeers: 0,
-      emptyHint: null,
+      emptyHint: score === null ? emptyHint : null,
     };
   };
 
@@ -201,12 +203,18 @@ export function buildProfileViewModel({
       own: ownScoreOf(own, "aula_teste"),
       hiddenPeers: 0,
       emptyHint:
-        lessonScore === null
-          ? "Sem aula-teste lançada — clique para avaliar"
-          : null,
+        lessonScore === null ? "Ninguém lançou nota de aula-teste." : null,
     },
-    groupCard("didatica", ["didatica_objetiva", "didatica_dissertativa"]),
-    groupCard("conteudo", ["conteudo_dissertativa", "conteudo_objetiva"]),
+    groupCard(
+      "didatica",
+      ["didatica_objetiva", "didatica_dissertativa"],
+      "O candidato não respondeu ao formulário de didática.",
+    ),
+    groupCard(
+      "conteudo",
+      ["conteudo_dissertativa", "conteudo_objetiva"],
+      "Não fez prova de conteúdo.",
+    ),
     {
       code: "video",
       label: "Vídeo",
@@ -219,7 +227,9 @@ export function buildProfileViewModel({
       own: ownScoreOf(own, "video"),
       hiddenPeers: 0,
       emptyHint:
-        videoScore === null ? "Sem nota de vídeo — clique para avaliar" : null,
+        videoScore === null
+          ? "Sem nota. Lance junto ao link do vídeo."
+          : null,
     },
   ];
 
@@ -296,7 +306,9 @@ export function buildProfileViewModel({
     identity: {
       name: candidate.fullName,
       disciplineName: focusedApp?.disciplineName ?? null,
-      campaignName: focusedApp?.campaignName ?? null,
+      campaignName: focusedApp?.campaignName
+        ? shortCampaignName(focusedApp.campaignName)
+        : null,
       campaignSlug: focusedApp?.campaignSlug ?? null,
       status: focusedApp?.status ?? "novo",
       statusLabel: labelFor(candidateStatusLabels, focusedApp?.status ?? "novo"),
@@ -331,6 +343,10 @@ export function buildProfileViewModel({
     materials: {
       curriculoUrl: urlOf("curriculo"),
       videoUrl: urlOf("video"),
+      videoDimensionId: videoDim?.id ?? null,
+      videoOwn: ownScoreOf(own, "video"),
+      videoScore: videoScore,
+      videoDisplay: formatScore(videoScore),
       differential: focusedApp?.differentialText ?? null,
       candidateObservation: focusedApp?.candidateObservation ?? null,
     },

@@ -167,12 +167,30 @@ export function computeQnF(
   return weightedSum / weightSum;
 }
 
+/**
+ * Formatadores reaproveitados, um por número de casas.
+ *
+ * `value.toLocaleString(locale, options)` constrói um `Intl.NumberFormat` novo
+ * a cada chamada, e o Painel formata ~5.600 números por render (707 linhas ×
+ * 8 notas). Medido: a página levava 21s no servidor por causa disto.
+ */
+const scoreFormatters = new Map<number, Intl.NumberFormat>();
+
+function scoreFormatter(digits: number): Intl.NumberFormat {
+  let formatter = scoreFormatters.get(digits);
+  if (!formatter) {
+    formatter = new Intl.NumberFormat("pt-BR", {
+      minimumFractionDigits: digits,
+      maximumFractionDigits: digits,
+    });
+    scoreFormatters.set(digits, formatter);
+  }
+  return formatter;
+}
+
 export function formatScore(value: number | null, digits = 1): string {
   if (value === null || Number.isNaN(value)) return "—";
-  return value.toLocaleString("pt-BR", {
-    minimumFractionDigits: digits,
-    maximumFractionDigits: digits,
-  });
+  return scoreFormatter(digits).format(value);
 }
 
 export function formatCoverage(coverage: number, total: number): string {

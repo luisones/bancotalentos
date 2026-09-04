@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { MicroHeader } from "@/components/liceu/surface";
 import { overrideAnswerScore } from "@/lib/actions/evaluations";
 import type { ActionErrorCode } from "@/lib/actions/result";
 import { actionErrorMessages, labelFor } from "@/lib/labels";
@@ -29,8 +28,10 @@ export function AnswerScores({
   canWrite: boolean;
 }) {
   return (
-    <div>
-      <MicroHeader>Respostas dissertativas</MicroHeader>
+    // Medida limitada: em largura total a resposta vinha com ~180 caracteres
+    // por linha e o olho perde a linha seguinte. O rótulo da seção já está na
+    // faixa que abriu isto — repeti-lo aqui seria dizer duas vezes.
+    <div className="max-w-[78ch]">
       <div className="flex flex-col gap-3">
         {answers.map((answer) => (
           <AnswerRow
@@ -41,7 +42,7 @@ export function AnswerScores({
           />
         ))}
       </div>
-      <p className="text-meta mt-2 text-subtle">
+      <p className="text-meta mt-3 text-subtle">
         A nota da Didática dissertativa é recalculada a partir destas quatro. Ela
         só muda quando as quatro têm nota — com três, a fórmula produziria um
         número artificialmente baixo.
@@ -115,7 +116,7 @@ function AnswerRow({
       </div>
 
       {answer.text ? (
-        <p className="text-meta mt-1 whitespace-pre-wrap leading-relaxed text-ink-3">
+        <p className="text-note mt-1 whitespace-pre-wrap leading-relaxed text-ink-2">
           {answer.text}
         </p>
       ) : (

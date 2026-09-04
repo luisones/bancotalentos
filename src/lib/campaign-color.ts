@@ -3,23 +3,23 @@ import type { Tone } from "./tone";
 /**
  * Cor do chip de campanha.
  *
- * Derivada do slug por hash estável, e não por uma tabela fixa: hoje são duas
- * campanhas, e a terceira não pode nascer sem cor nem obrigar alguém a lembrar
- * de vir aqui. O mesmo slug dá sempre a mesma cor, então a associação
- * cor→campanha se aprende varrendo a lista.
- *
  * A paleta exclui `alert` e `positive`: campanha é metadado factual, não
  * desfecho. Verde ao lado de um nome leria como aprovação.
  */
 const PALETTE: Tone[] = ["navy", "gold", "neutral"];
 
-export function campaignTone(slug: string | null): Tone {
-  if (!slug) return "neutral";
-  let hash = 0;
-  for (let i = 0; i < slug.length; i += 1) {
-    hash = (hash * 31 + slug.charCodeAt(i)) | 0;
-  }
-  return PALETTE[Math.abs(hash) % PALETTE.length];
+/**
+ * Atribui uma cor por campanha, garantindo que campanhas diferentes recebam
+ * cores diferentes enquanto couberem na paleta.
+ *
+ * Por índice na ordem alfabética do slug, e não por hash: com duas campanhas,
+ * um hash sobre três cores erra 1 vez em 3 — e errou, "2025 EFAF-EM" e
+ * "2026 SCS" saíam as duas em gold, que é exatamente o contrário do que o chip
+ * colorido existe para fazer.
+ */
+export function campaignToneMap(slugs: string[]): Map<string, Tone> {
+  const ordered = [...new Set(slugs)].sort();
+  return new Map(ordered.map((slug, i) => [slug, PALETTE[i % PALETTE.length]]));
 }
 
 /** "2026 — SCS" -> "2026 SCS": o chip é estreito e o travessão não informa. */

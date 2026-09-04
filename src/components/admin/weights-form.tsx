@@ -146,7 +146,9 @@ export function WeightsForm({
   }
 
   return (
-    <div className="flex flex-col gap-4">
+    // Medida contida: com o rótulo na borda esquerda e o campo na direita de
+    // uma tela de 1400px, ninguém associa um ao outro.
+    <div className="flex max-w-[720px] flex-col gap-4">
       <Panel>
         <MicroHeader>Peso de cada item no Resultado</MicroHeader>
         {items.map((item) => (

@@ -158,6 +158,11 @@ export type ProfileViewModel = {
   materials: {
     curriculoUrl: string | null;
     videoUrl: string | null;
+    /** A nota do vídeo se lança AO LADO do vídeo, não numa aba de avaliação. */
+    videoDimensionId: string | null;
+    videoOwn: OwnScore | null;
+    videoScore: number | null;
+    videoDisplay: string;
     /** Texto do candidato — não é observação da equipe. */
     differential: string | null;
     candidateObservation: string | null;

@@ -1,6 +1,8 @@
 import { MicroHeader, Panel } from "@/components/liceu/surface";
 import type { ProfileViewModel } from "@/lib/types/candidate-profile";
+import { cn } from "@/lib/utils";
 import { NoteWriter } from "./note-writer";
+import { ScoreInput } from "./score-input";
 
 /**
  * Currículo, vídeo e escrita, lado a lado.
@@ -14,14 +16,20 @@ import { NoteWriter } from "./note-writer";
  * lado direito, encostados na caixa de escrita, porque é o que mais
  * frequentemente motiva o que se escreve.
  */
-export function MaterialsPanel({ vm }: { vm: ProfileViewModel }) {
+export function MaterialsPanel({
+  vm,
+  applicationId,
+}: {
+  vm: ProfileViewModel;
+  applicationId: string | null;
+}) {
   const { materials, notes, viewer } = vm;
 
   return (
     <Panel padding="none">
       <div className="grid gap-px bg-rule lg:grid-cols-2">
         <div className="flex flex-col gap-3 bg-card px-4 py-3.5">
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <MaterialLink
               href={materials.curriculoUrl}
               label="Abrir currículo"
@@ -33,6 +41,52 @@ export function MaterialsPanel({ vm }: { vm: ProfileViewModel }) {
               missing="Vídeo não anexado"
             />
           </div>
+
+          {/* A nota do vídeo se lança AQUI, ao lado do link: é o momento em que
+              ela é formada. Numa seção de avaliação separada, o avaliador
+              perderia o vídeo de vista antes de conseguir registrar.
+
+              Fechada por padrão: os onze botões de 0 a 10 ocupam meia coluna, e
+              na maioria das visitas ninguém vai lançar nota nenhuma. */}
+          {viewer.canWrite && applicationId && materials.videoDimensionId ? (
+            <details className="group">
+              <summary className="text-cell flex cursor-pointer list-none items-baseline gap-2 hover:text-navy">
+                <span className="text-micro uppercase tracking-micro text-label">
+                  Nota do vídeo
+                </span>
+                <strong
+                  className={cn(
+                    "font-semibold tabular-nums",
+                    materials.videoScore === null && "text-faint",
+                  )}
+                >
+                  {materials.videoDisplay}
+                </strong>
+                <span className="text-meta font-semibold text-gold-text group-open:hidden">
+                  {materials.videoScore === null ? "avaliar" : "alterar"}
+                </span>
+              </summary>
+              <div className="mt-2">
+                <ScoreInput
+                  applicationId={applicationId}
+                  dimensionId={materials.videoDimensionId}
+                  dimensionName="Vídeo"
+                  own={materials.videoOwn}
+                />
+              </div>
+            </details>
+          ) : (
+            materials.videoScore !== null && (
+              <span className="text-cell flex items-baseline gap-2">
+                <span className="text-micro uppercase tracking-micro text-label">
+                  Nota do vídeo
+                </span>
+                <strong className="font-semibold tabular-nums">
+                  {materials.videoDisplay}
+                </strong>
+              </span>
+            )
+          )}
 
           <CandidateText
             title="Diferencial"

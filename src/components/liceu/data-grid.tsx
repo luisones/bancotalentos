@@ -45,8 +45,11 @@ const alignClass = {
  * linhas. A referência repete grid-template-columns à mão no header e nas
  * linhas, que é exatamente como uma tabela densa apodrece.
  *
- * Responsivo por @container, não media query: o mesmo grid precisa funcionar a
- * 1200px na coluna principal e a 300px dentro do rail.
+ * O empilhamento no celular é MEDIA QUERY, não container query. Era container
+ * query por causa de um rail de 300px que não existe mais — e a escala de
+ * container do Tailwind v4 é outra (`@md` = 28rem, não 48rem), então a 400px de
+ * viewport o contêiner media 450px e a linha nunca empilhava: a tabela saía
+ * cortada pela borda direita da tela.
  */
 export function DataGrid({
   columns,
@@ -79,18 +82,34 @@ export function DataGrid({
         ["--dg-cols" as string]: cols,
         ...(minWidth ? { ["--dg-min" as string]: `${minWidth}px` } : {}),
       }}
-      className={cn("@container", className)}
+      className={className}
     >
       {caption && (
         <p className="text-tag mb-2.5 text-subtle">{caption}</p>
       )}
-      <div className={minWidth ? "overflow-x-auto" : undefined}>
+      {/*
+        NÃO há contêiner de rolagem aqui de propósito.
+
+        Qualquer elemento com overflow vira scrollport, e um cabeçalho `sticky`
+        gruda no scrollport mais próximo. Envolver a tabela num
+        `overflow-x-auto` fazia o cabeçalho ancorar naquele contêiner de
+        39.000px e aparecer no meio da lista, cobrindo a primeira linha.
+
+        Sem o wrapper, o cabeçalho gruda logo abaixo do header do app e a
+        página rola normalmente. Em telas estreitas a linha empilha e vira
+        registro (max-md); na faixa entre isso e a largura total, quem rola na
+        horizontal é a página — que é o comportamento que o navegador já sabe
+        fazer bem.
+      */}
+      <div>
         <div className={minWidth ? "min-w-[var(--dg-min)]" : undefined}>
           <div
             className={cn(
-              "grid gap-3 border-b border-rule-strong px-3 pb-2 [grid-template-columns:var(--dg-cols)] @max-md:hidden",
-              // Opaco de propósito: transparente, as linhas passariam por baixo.
-              stickyHeader && "sticky top-header z-10 bg-card pt-2",
+              "grid gap-3 border-b border-rule-strong px-3 pb-2 [grid-template-columns:var(--dg-cols)] max-md:hidden",
+              // Opaco e com sombra: transparente, as linhas passariam por
+              // baixo sem que se percebesse que o cabeçalho está fixo.
+              stickyHeader &&
+                "sticky top-header z-10 bg-card pt-2 shadow-[0_6px_10px_-8px_rgba(11,48,83,0.35)]",
             )}
           >
             {columns.map((c) => (
@@ -192,7 +211,7 @@ export function DataGridRow({
     "relative grid items-center gap-3 border-b border-rule-weak px-3 py-row-y",
     "[grid-template-columns:var(--dg-cols)]",
     // Abaixo do limiar do container a linha empilha e vira um registro.
-    "@max-md:grid-cols-1 @max-md:gap-1",
+    "max-md:!grid-cols-1 max-md:gap-1",
     href && "hover:bg-row-hover",
     className,
   );
@@ -236,14 +255,14 @@ export function Cell({
       className={cn(
         "text-cell min-w-0",
         alignClass[align],
-        "@max-md:!text-left",
-        hideOnStack && "@max-md:hidden",
+        "max-md:!text-left",
+        hideOnStack && "max-md:hidden",
         muted && "text-muted-foreground",
         className,
       )}
     >
       {stackLabel && (
-        <span className="text-micro mr-1.5 hidden uppercase tracking-micro text-label @max-md:inline">
+        <span className="text-micro mr-1.5 hidden uppercase tracking-micro text-label max-md:inline">
           {stackLabel}
         </span>
       )}

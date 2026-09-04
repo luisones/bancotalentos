@@ -62,6 +62,7 @@ export default async function PesosPage() {
       <PageHeader
         breadcrumb={[{ label: "Admin" }, { label: "Pesos" }]}
         title="Pesos do Resultado"
+        className="max-w-[720px]"
         sub={
           summary
             ? `${summary.label} — em vigor desde ${new Date(

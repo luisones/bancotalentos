@@ -8,7 +8,7 @@ import { StateBadge } from "@/components/liceu/chip";
 import { PainelFilters } from "@/components/painel/painel-filters";
 import { Skeleton } from "@/components/ui/skeleton";
 import { requireStaff } from "@/lib/auth/staff";
-import { campaignTone, shortCampaignName } from "@/lib/campaign-color";
+import { campaignToneMap, shortCampaignName } from "@/lib/campaign-color";
 import { candidateStatusLabels, labelFor } from "@/lib/labels";
 import {
   getRankingFiltersData,
@@ -19,23 +19,24 @@ import {
 import { SORT_KEYS } from "@/lib/ranking-sort";
 import { formatScore } from "@/lib/scoring";
 import { statusTone } from "@/lib/status";
+import type { Tone } from "@/lib/tone";
 import { cn } from "@/lib/utils";
 
 const COLUMNS = [
-  { key: "cand", label: "Candidato", width: "minmax(220px,1.4fr)", sortKey: "name" },
-  { key: "score", label: "Resultado", width: "112px", align: "end" as const, numeric: true, sortKey: "score" },
-  { key: "at", label: "Aula-teste", width: "92px", align: "end" as const, numeric: true, sortKey: "aula_teste", hideOnStack: true },
-  { key: "did", label: "Didática", width: "116px", align: "end" as const, numeric: true, sortKey: "didatica", hideOnStack: true },
-  { key: "cont", label: "Conteúdo", width: "116px", align: "end" as const, numeric: true, sortKey: "conteudo", hideOnStack: true },
-  { key: "vid", label: "Vídeo", width: "80px", align: "end" as const, numeric: true, sortKey: "video", hideOnStack: true },
-  { key: "eng", label: "Inglês", width: "92px", sortKey: "ingles", hideOnStack: true },
-  { key: "sa", label: "Santo André", width: "96px", align: "end" as const, numeric: true, sortKey: "santo_andre" },
-  { key: "scs", label: "S. Caetano", width: "96px", align: "end" as const, numeric: true, sortKey: "sao_caetano" },
-  { key: "status", label: "Status", width: "150px", align: "end" as const, sortKey: "status" },
+  { key: "cand", label: "Candidato", width: "minmax(196px,1.4fr)", sortKey: "name" },
+  { key: "score", label: "Resultado", width: "104px", align: "end" as const, numeric: true, sortKey: "score" },
+  { key: "at", label: "Aula-teste", width: "96px", align: "end" as const, numeric: true, sortKey: "aula_teste", hideOnStack: true },
+  { key: "did", label: "Didática", width: "108px", align: "end" as const, numeric: true, sortKey: "didatica" },
+  { key: "cont", label: "Conteúdo", width: "108px", align: "end" as const, numeric: true, sortKey: "conteudo" },
+  { key: "vid", label: "Vídeo", width: "72px", align: "end" as const, numeric: true, sortKey: "video", hideOnStack: true },
+  { key: "eng", label: "Inglês", width: "88px", sortKey: "ingles", hideOnStack: true },
+  { key: "sa", label: "Santo André", width: "104px", align: "end" as const, numeric: true, sortKey: "santo_andre" },
+  { key: "scs", label: "São Caetano", width: "104px", align: "end" as const, numeric: true, sortKey: "sao_caetano" },
+  { key: "status", label: "Status", width: "124px", align: "end" as const, sortKey: "status" },
 ];
 
-/** Largura somada das colunas: abaixo disso a tabela rola na horizontal. */
-const MIN_WIDTH = 1180;
+/** Um formatador só para as 1.400 distâncias da tabela. Ver `formatScore`. */
+const kmFormat = new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 0 });
 
 export default async function PainelPage({
   searchParams,
@@ -61,6 +62,8 @@ export default async function PainelPage({
     getRankingFiltersData(),
     getRankingRows(filters, staff.id),
   ]);
+
+  const campaignTones = campaignToneMap(campaigns.map((c) => c.slug));
 
   /**
    * Reescreve a URL trocando só o que mudou.
@@ -90,7 +93,9 @@ export default async function PainelPage({
   return (
     <div className="flex flex-col gap-4">
       <PageHeader
-        breadcrumb={[{ label: "Painel" }]}
+        // Raiz do app: um breadcrumb "Painel" acima de um título "Painel" diz
+        // a mesma coisa duas vezes e não leva a lugar nenhum.
+        breadcrumb={[]}
         title="Painel"
         sub={`${rows.length} candidatura${rows.length === 1 ? "" : "s"} — clique no cabeçalho de qualquer coluna para reordenar`}
       />
@@ -99,6 +104,7 @@ export default async function PainelPage({
         <PainelFilters
           campaigns={campaigns}
           disciplines={disciplines}
+          campaignTones={campaignTones}
           active={filters}
           hrefFor={hrefFor}
         />
@@ -107,7 +113,6 @@ export default async function PainelPage({
       <div className="rounded-panel border border-rule-strong bg-card p-2">
         <DataGrid
           columns={COLUMNS}
-          minWidth={MIN_WIDTH}
           stickyHeader
           sort={{
             key: filters.sort!,
@@ -126,6 +131,7 @@ export default async function PainelPage({
                 <PainelRow
                   key={row.applicationId}
                   row={row}
+                  tone={campaignTones.get(row.campaignSlug ?? "") ?? "neutral"}
                   href={`/candidatos/${row.candidateId}?${rowQuery}`}
                 />
               ))
@@ -145,7 +151,15 @@ export default async function PainelPage({
   );
 }
 
-function PainelRow({ row, href }: { row: RankingRow; href: string }) {
+function PainelRow({
+  row,
+  href,
+  tone,
+}: {
+  row: RankingRow;
+  href: string;
+  tone: Tone;
+}) {
   return (
     <DataGridRow
       href={href}
@@ -169,10 +183,7 @@ function PainelRow({ row, href }: { row: RankingRow; href: string }) {
             <span className="text-meta truncate text-subtle">
               {row.disciplineName ?? "Sem disciplina"}
             </span>
-            <CampaignChip
-              name={row.campaignName}
-              slug={row.campaignSlug}
-            />
+            <CampaignChip name={row.campaignName} tone={tone} />
           </div>
           <QuickNoteLine note={row.quickNote} />
         </Cell>,
@@ -190,7 +201,7 @@ function PainelRow({ row, href }: { row: RankingRow; href: string }) {
           <Score value={row.scores.aula_teste ?? null} />
         </Cell>,
 
-        <Cell key="did" align="end" hideOnStack>
+        <Cell key="did" align="end" stackLabel="Didática">
           <GroupScore
             value={row.scores.didatica ?? null}
             parts={[
@@ -200,7 +211,7 @@ function PainelRow({ row, href }: { row: RankingRow; href: string }) {
           />
         </Cell>,
 
-        <Cell key="cont" align="end" hideOnStack>
+        <Cell key="cont" align="end" stackLabel="Conteúdo">
           <GroupScore
             value={row.scores.conteudo ?? null}
             parts={[
@@ -222,7 +233,7 @@ function PainelRow({ row, href }: { row: RankingRow; href: string }) {
           <Distance km={row.kmSantoAndre} mode={row.distanceMode} precision={row.distancePrecision} />
         </Cell>,
 
-        <Cell key="scs" align="end" numeric stackLabel="S. Caetano">
+        <Cell key="scs" align="end" numeric stackLabel="São Caetano">
           <Distance km={row.kmSaoCaetano} mode={row.distanceMode} precision={row.distancePrecision} />
         </Cell>,
 
@@ -236,15 +247,8 @@ function PainelRow({ row, href }: { row: RankingRow; href: string }) {
   );
 }
 
-function CampaignChip({
-  name,
-  slug,
-}: {
-  name: string | null;
-  slug: string | null;
-}) {
+function CampaignChip({ name, tone }: { name: string | null; tone: Tone }) {
   if (!name) return null;
-  const tone = campaignTone(slug);
   return (
     <span
       className={cn(
@@ -279,9 +283,13 @@ function Score({ value }: { value: number | null }) {
 /**
  * Média do grupo com as partes embaixo.
  *
- * A parte ausente aparece como `—` e não some: é assim que "fez só a objetiva"
- * fica legível sem uma linha de texto explicando. A média em cima é ponderada
- * (em Conteúdo a dissertativa vale 2), o que os pesos em /admin/pesos definem.
+ * As duas partes vão em colunas de largura fixa, e não separadas por um ponto
+ * médio: com o ponto, "DO 8,2 · DD 8,0" e "DO 10,0 · DD 7,5" desalinhavam a
+ * cada linha, e o `—` de uma parte ausente colava no separador ("CD —· CO").
+ * Em grade, DO e DD ficam sempre na mesma posição e a coluna se lê para baixo.
+ *
+ * A média em cima é PONDERADA (em Conteúdo a dissertativa vale 2). É por isso
+ * que ela pode não ser o meio dos dois números de baixo.
  */
 function GroupScore({
   value,
@@ -291,22 +299,28 @@ function GroupScore({
   parts: Array<[string, number | null]>;
 }) {
   return (
-    <span className="inline-flex flex-col items-end">
+    // `block`, e não `inline-flex`: um flex encolhido pela largura do número
+    // fazia o `w-full` da grade de baixo valer ~30px, e as duas partes
+    // colavam ("DO 8,2DD 8,0").
+    <span className="block text-right">
       <span
         className={cn(
-          "text-row font-semibold",
+          "text-row block font-semibold",
           value === null ? "text-faint" : "text-ink",
         )}
       >
         {formatScore(value)}
       </span>
-      <span className="text-micro tabular-nums text-subtle">
-        {parts.map(([label, part], i) => (
-          <span key={label}>
-            {i > 0 && " · "}
-            <span className={part === null ? "text-faint" : undefined}>
-              {label} {formatScore(part)}
-            </span>
+      <span className="text-micro inline-grid grid-cols-2 gap-x-2 tabular-nums">
+        {parts.map(([label, part]) => (
+          <span
+            key={label}
+            className={cn(
+              "whitespace-nowrap text-right",
+              part === null ? "text-faint" : "text-subtle",
+            )}
+          >
+            {label} {formatScore(part)}
           </span>
         ))}
       </span>
@@ -375,7 +389,7 @@ function Distance({
   return (
     <span className="text-cell text-ink" title={detail}>
       {approximate && <span className="text-subtle">≈ </span>}
-      {km.toLocaleString("pt-BR", { maximumFractionDigits: 0 })} km
+      {kmFormat.format(km)} km
     </span>
   );
 }
