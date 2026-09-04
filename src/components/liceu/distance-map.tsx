@@ -105,10 +105,13 @@ function RouteLink({
 }: {
   lat: number;
   lng: number;
-  unit: { lat: number; lng: number };
+  unit: { address: string };
   label: string;
 }) {
-  const href = `https://www.google.com/maps/dir/?api=1&origin=${lat},${lng}&destination=${unit.lat},${unit.lng}&travelmode=driving`;
+  // Destino pelo endereço, não pelo lat/lng: o Google geocodifica o número
+  // (Silveiras 70, Martim Francisco 471). Origem continua sendo o CEP — é o
+  // que temos do candidato.
+  const href = `https://www.google.com/maps/dir/?api=1&origin=${lat},${lng}&destination=${encodeURIComponent(unit.address)}&travelmode=driving`;
   return (
     <a
       href={href}
