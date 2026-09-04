@@ -4,9 +4,8 @@ import { campaignToneMap } from "@/lib/campaign-color";
 import {
   getAllRankingRows,
   getRankingFiltersData,
-  type RankingFilters,
 } from "@/lib/queries/ranking";
-import { SORT_KEYS } from "@/lib/ranking-sort";
+import { parseRankingFiltersFromRecord } from "@/lib/ranking-sort";
 import type { Tone } from "@/lib/tone";
 
 export default async function PainelPage({
@@ -15,18 +14,7 @@ export default async function PainelPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const staff = await requireStaff();
-  const params = await searchParams;
-  const str = (k: string) =>
-    typeof params[k] === "string" ? (params[k] as string) : undefined;
-
-  const sort = str("sort");
-  const initialFilters: RankingFilters = {
-    campaign: str("campaign"),
-    discipline: str("discipline"),
-    search: str("search"),
-    sort: sort && SORT_KEYS.includes(sort) ? sort : "score",
-    order: str("order") === "asc" ? "asc" : "desc",
-  };
+  const initialFilters = parseRankingFiltersFromRecord(await searchParams);
 
   // Banco inteiro uma vez; filtro/sort vivem no cliente.
   const [{ campaigns, disciplines }, rows] = await Promise.all([

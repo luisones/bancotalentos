@@ -7,12 +7,45 @@ import {
   disciplineFilterOptions,
   disciplineGroupSlug,
 } from "@/lib/discipline-group";
-import type { RankingFilters } from "@/lib/ranking-sort";
+import {
+  DISTANCE_MAX_KM,
+  toggleIncluded,
+  type DistanceUnit,
+  type EnglishLetter,
+  type HasScoreKey,
+  type RankingFilters,
+} from "@/lib/ranking-sort";
 import { toneTinted, type Tone } from "@/lib/tone";
 import { cn } from "@/lib/utils";
 import { SearchField } from "./search-field";
 
 export type FilterOption = { slug: string; name: string };
+
+const HAS_SCORE_OPTIONS: { key: HasScoreKey; label: string }[] = [
+  { key: "didatica", label: "Didática" },
+  { key: "conteudo", label: "Conteúdo" },
+  { key: "aula_teste", label: "Aula-teste" },
+  { key: "video", label: "Vídeo" },
+];
+
+const ENGLISH_OPTIONS: {
+  key: EnglishLetter;
+  label: string;
+  title: string;
+}[] = [
+  { key: "A", label: "A1–A2", title: "A1–A2 (básico)" },
+  { key: "B", label: "B1–B2", title: "B1–B2 (intermediário)" },
+  { key: "C", label: "C1–C2", title: "C1–C2 (avançado/fluente)" },
+];
+
+const DISTANCE_UNIT_OPTIONS: {
+  key: DistanceUnit;
+  label: string;
+  title: string;
+}[] = [
+  { key: "santo_andre", label: "S. André", title: "Santo André" },
+  { key: "sao_caetano", label: "S. Caetano", title: "São Caetano" },
+];
 
 /**
  * Filtros de um clique — estado local no Painel (sem RSC / Neon).
@@ -34,7 +67,12 @@ export function PainelFilters({
   onChange: (patch: Partial<RankingFilters>) => void;
 }) {
   const hasFilters = Boolean(
-    active.campaign || active.discipline || active.search,
+    active.campaign ||
+      active.discipline ||
+      active.search ||
+      active.has?.length ||
+      active.ingles?.length ||
+      (active.unit && active.maxKm),
   );
 
   return (
@@ -69,6 +107,10 @@ export function PainelFilters({
                     campaign: undefined,
                     discipline: undefined,
                     search: undefined,
+                    has: undefined,
+                    ingles: undefined,
+                    unit: undefined,
+                    maxKm: undefined,
                   })
                 }
                 className="text-note whitespace-nowrap font-semibold text-gold-text hover:underline"
@@ -111,6 +153,81 @@ export function PainelFilters({
             </Pill>
           ))}
         </FilterRow>
+
+        <FilterRow label="Com nota">
+          {HAS_SCORE_OPTIONS.map((item) => (
+            <Pill
+              key={item.key}
+              active={Boolean(active.has?.includes(item.key))}
+              title={`Só quem tem nota de ${item.label}`}
+              onClick={() =>
+                onChange({ has: toggleIncluded(active.has, item.key) })
+              }
+            >
+              {item.label}
+            </Pill>
+          ))}
+        </FilterRow>
+
+        <FilterRow label="Inglês">
+          {ENGLISH_OPTIONS.map((item) => (
+            <Pill
+              key={item.key}
+              active={Boolean(active.ingles?.includes(item.key))}
+              title={item.title}
+              onClick={() =>
+                onChange({ ingles: toggleIncluded(active.ingles, item.key) })
+              }
+            >
+              {item.label}
+            </Pill>
+          ))}
+        </FilterRow>
+
+        <FilterRow label="Distância">
+          {DISTANCE_UNIT_OPTIONS.map((item) => (
+            <Pill
+              key={item.key}
+              active={active.unit === item.key}
+              title={item.title}
+              onClick={() =>
+                onChange(
+                  active.unit === item.key
+                    ? { unit: undefined, maxKm: undefined }
+                    : { unit: item.key },
+                )
+              }
+            >
+              {item.label}
+            </Pill>
+          ))}
+          <span className="inline-flex flex-wrap items-center gap-1.5">
+            <span aria-hidden className="text-note text-subtle">
+              até
+            </span>
+            {DISTANCE_MAX_KM.map((km) => (
+              <Pill
+                key={km}
+                active={active.maxKm === km}
+                title={
+                  active.unit
+                    ? `Até ${km} km de ${
+                        DISTANCE_UNIT_OPTIONS.find((u) => u.key === active.unit)
+                          ?.title
+                      }`
+                    : `Até ${km} km da unidade`
+                }
+                onClick={() =>
+                  onChange({
+                    maxKm: active.maxKm === km ? undefined : km,
+                  })
+                }
+              >
+                {km} km
+              </Pill>
+            ))}
+          </span>
+        </FilterRow>
       </div>
     </div>
   );
@@ -124,8 +241,12 @@ function FilterRow({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1.5">
-      <MicroHeader className="mb-0 w-[72px] shrink-0 border-0 pb-0">
+    <div
+      role="group"
+      aria-label={label}
+      className="flex flex-wrap items-baseline gap-x-3 gap-y-1.5"
+    >
+      <MicroHeader className="mb-0 w-[5rem] shrink-0 whitespace-nowrap border-0 pb-0">
         {label}
       </MicroHeader>
       <div className="flex min-w-0 flex-wrap gap-1.5">{children}</div>

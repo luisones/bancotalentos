@@ -3,8 +3,10 @@ import {
   applyRankingFilters,
   englishRank,
   painelHref,
+  parseRankingFilters,
   sortRows,
   STATUS_ORDER,
+  toggleIncluded,
   type SortableRow,
 } from "./ranking-sort";
 
@@ -26,6 +28,10 @@ function filterRow(
     campaign?: string | null;
     discipline?: string | null;
     email?: string | null;
+    english?: string | null;
+    kmSA?: number | null;
+    kmSCS?: number | null;
+    scores?: Record<string, number | null>;
   } = {},
 ): FilterRow {
   return {
@@ -36,11 +42,11 @@ function filterRow(
     email: opts.email ?? null,
     disciplineName: opts.discipline ?? null,
     appliedAt: null,
-    englishLevel: null,
-    kmSantoAndre: null,
-    kmSaoCaetano: null,
+    englishLevel: opts.english ?? null,
+    kmSantoAndre: opts.kmSA ?? null,
+    kmSaoCaetano: opts.kmSCS ?? null,
     status: "novo",
-    scores: {},
+    scores: opts.scores ?? {},
   };
 }
 
@@ -194,5 +200,113 @@ describe("filtro do Painel", () => {
       "/?sort=name&order=asc",
     );
     expect(painelHref({ campaign: "2026-scs" })).toBe("/?campaign=2026-scs");
+  });
+
+  it("com nota exige TODAS as dimensões marcadas", () => {
+    const scored = [
+      filterRow("Só didática", { scores: { didatica: 8 } }),
+      filterRow("Didática e vídeo", {
+        scores: { didatica: 7, video: 6 },
+      }),
+      filterRow("Nota zero de vídeo", { scores: { video: 0 } }),
+      filterRow("Nada", { scores: {} }),
+    ];
+
+    expect(
+      applyRankingFilters(scored, { has: ["didatica"] }).map(
+        (r) => r.candidateName,
+      ),
+    ).toEqual(["Só didática", "Didática e vídeo"]);
+
+    expect(
+      applyRankingFilters(scored, { has: ["didatica", "video"] }).map(
+        (r) => r.candidateName,
+      ),
+    ).toEqual(["Didática e vídeo"]);
+
+    // Zero é nota. Ausência é que não entra.
+    expect(
+      applyRankingFilters(scored, { has: ["video"] }).map(
+        (r) => r.candidateName,
+      ),
+    ).toEqual(["Didática e vídeo", "Nota zero de vídeo"]);
+  });
+
+  it("inglês combina os níveis marcados (OU) pelo prefixo", () => {
+    const levels = [
+      filterRow("Ana A", { english: "A1-A2 (básico)", score: 9 }),
+      filterRow("Bia B", { english: "B1-B2 (intermediário)", score: 8 }),
+      filterRow("Caio C", { english: "C1-C2 (avançado/fluente)", score: 7 }),
+      filterRow("Dora sem", { english: null, score: 6 }),
+    ];
+
+    expect(
+      applyRankingFilters(levels, { ingles: ["B"] }).map(
+        (r) => r.candidateName,
+      ),
+    ).toEqual(["Bia B"]);
+
+    expect(
+      applyRankingFilters(levels, { ingles: ["B", "C"] }).map(
+        (r) => r.candidateName,
+      ),
+    ).toEqual(["Bia B", "Caio C"]);
+  });
+
+  it("distância exige unidade e raio, e ausência não é zero", () => {
+    const near = [
+      filterRow("Perto SA", { kmSA: 8, kmSCS: 25, score: 9 }),
+      filterRow("Longe SA", { kmSA: 40, kmSCS: 12, score: 8 }),
+      filterRow("Sem CEP", { score: 7 }),
+    ];
+
+    expect(
+      applyRankingFilters(near, { unit: "santo_andre", maxKm: 20 }).map(
+        (r) => r.candidateName,
+      ),
+    ).toEqual(["Perto SA"]);
+
+    expect(
+      applyRankingFilters(near, { unit: "sao_caetano", maxKm: 20 }).map(
+        (r) => r.candidateName,
+      ),
+    ).toEqual(["Longe SA"]);
+
+    // Unidade sem raio não filtra — o clique ainda está pela metade.
+    expect(
+      applyRankingFilters(near, { unit: "santo_andre" }).map(
+        (r) => r.candidateName,
+      ),
+    ).toEqual(["Perto SA", "Longe SA", "Sem CEP"]);
+  });
+
+  it("serializa e relê os filtros novos na URL", () => {
+    const href = painelHref({
+      has: ["video", "didatica"],
+      ingles: ["C", "A"],
+      unit: "sao_caetano",
+      maxKm: 30,
+    });
+    expect(href).toBe(
+      `/?${new URLSearchParams({
+        has: "didatica,video",
+        ingles: "A,C",
+        unit: "sao_caetano",
+        maxKm: "30",
+      })}`,
+    );
+    expect(parseRankingFilters(href)).toMatchObject({
+      has: ["didatica", "video"],
+      ingles: ["A", "C"],
+      unit: "sao_caetano",
+      maxKm: 30,
+      sort: "score",
+      order: "desc",
+    });
+  });
+
+  it("toggleIncluded esvazia a lista em vez de deixar []", () => {
+    expect(toggleIncluded(["didatica"], "didatica")).toBeUndefined();
+    expect(toggleIncluded(undefined, "video")).toEqual(["video"]);
   });
 });

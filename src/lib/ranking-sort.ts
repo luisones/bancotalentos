@@ -34,17 +34,51 @@ export const STATUS_ORDER: Record<string, number> = {
   selecionado: 8,
 };
 
+export const ENGLISH_LETTERS = ["A", "B", "C"] as const;
+export type EnglishLetter = (typeof ENGLISH_LETTERS)[number];
+
 /**
  * A1-A2 < B1-B2 < C1-C2. O rótulo vem do formulário, então casamos pelo
  * prefixo; rótulo que ninguém previu vira ausência, não zero.
  */
 export function englishRank(level: string | null): number | null {
+  const letter = englishLetter(level);
+  if (letter === "A") return 1;
+  if (letter === "B") return 2;
+  if (letter === "C") return 3;
+  return null;
+}
+
+export function englishLetter(level: string | null): EnglishLetter | null {
   if (!level) return null;
   const first = level.trim().charAt(0).toUpperCase();
-  if (first === "A") return 1;
-  if (first === "B") return 2;
-  if (first === "C") return 3;
+  if (first === "A" || first === "B" || first === "C") return first;
   return null;
+}
+
+/** Os quatro itens do Resultado — ter nota é `score != null`, nunca zero. */
+export const HAS_SCORE_KEYS = [
+  "didatica",
+  "conteudo",
+  "aula_teste",
+  "video",
+] as const;
+export type HasScoreKey = (typeof HAS_SCORE_KEYS)[number];
+
+export const DISTANCE_UNITS = ["santo_andre", "sao_caetano"] as const;
+export type DistanceUnit = (typeof DISTANCE_UNITS)[number];
+
+export const DISTANCE_MAX_KM = [10, 20, 30, 50] as const;
+
+/** Liga/desliga um item numa lista de filtro. Lista vazia vira ausência. */
+export function toggleIncluded<T extends string>(
+  list: T[] | undefined,
+  item: T,
+): T[] | undefined {
+  const next = list?.includes(item)
+    ? list.filter((value) => value !== item)
+    : [...(list ?? []), item];
+  return next.length ? next : undefined;
 }
 
 export type ColumnSort<T extends SortableRow> =
@@ -120,6 +154,13 @@ export type RankingFilters = {
   search?: string;
   sort?: string;
   order?: string;
+  /** Quem TEM nota nessas dimensões — várias pílulas = interseção (E). */
+  has?: HasScoreKey[];
+  /** Nível de inglês pelo prefixo A/B/C — várias pílulas = união (OU). */
+  ingles?: EnglishLetter[];
+  unit?: DistanceUnit;
+  /** Só filtra junto com `unit`. Distância desconhecida não entra. */
+  maxKm?: number;
 };
 
 /**
@@ -134,6 +175,10 @@ export type RankingFilters = {
  *
  * A disciplina compara pelo GRUPO (`discipline-group.ts`), então a pílula
  * "Português" traz as duas variantes.
+ *
+ * "Com nota" é interseção: Didática e Vídeo marcados exige as duas. Inglês é
+ * união: B e C traz quem é B ou C. Distância precisa de unidade E raio;
+ * CEP ausente não é 0 km — sai da lista.
  */
 export function applyRankingFilters<
   T extends SortableRow & {
@@ -143,6 +188,8 @@ export function applyRankingFilters<
   },
 >(rows: T[], filters: RankingFilters): T[] {
   const term = filters.search ? normalizeSearch(filters.search) : null;
+  const has = filters.has;
+  const ingles = filters.ingles;
   const filtered = rows.filter((row) => {
     if (filters.campaign && row.campaignSlug !== filters.campaign) return false;
     if (
@@ -151,6 +198,20 @@ export function applyRankingFilters<
         disciplineGroupSlug(filters.discipline)
     ) {
       return false;
+    }
+    if (has?.length) {
+      for (const key of has) {
+        if (row.scores[key] == null) return false;
+      }
+    }
+    if (ingles?.length) {
+      const letter = englishLetter(row.englishLevel);
+      if (!letter || !ingles.includes(letter)) return false;
+    }
+    if (filters.unit && filters.maxKm != null) {
+      const km =
+        filters.unit === "santo_andre" ? row.kmSantoAndre : row.kmSaoCaetano;
+      if (km == null || km > filters.maxKm) return false;
     }
     if (!term) return true;
     return normalizeSearch(row.candidateName).includes(term);
@@ -162,16 +223,117 @@ export function applyRankingFilters<
 }
 
 /**
- * Monta a query do Painel. Ordenação padrão (`score` desc) fica FORA da URL —
+ * Serializa os filtros. Ordenação padrão (`score` desc) fica FORA da URL —
  * senão "Limpar filtros" parece um filtro ativo.
  */
-export function painelHref(filters: RankingFilters): string {
+export function rankingSearchParams(filters: RankingFilters): URLSearchParams {
   const next = new URLSearchParams();
-  for (const [key, value] of Object.entries(filters)) {
-    if (!value) continue;
-    if (key === "sort" && value === "score" && filters.order !== "asc") continue;
-    if (key === "order" && filters.sort === "score" && value === "desc") continue;
-    next.set(key, value);
+  if (filters.campaign) next.set("campaign", filters.campaign);
+  if (filters.discipline) next.set("discipline", filters.discipline);
+  if (filters.search) next.set("search", filters.search);
+  if (filters.has?.length) {
+    next.set(
+      "has",
+      HAS_SCORE_KEYS.filter((key) => filters.has!.includes(key)).join(","),
+    );
   }
+  if (filters.ingles?.length) {
+    next.set(
+      "ingles",
+      ENGLISH_LETTERS.filter((letter) => filters.ingles!.includes(letter)).join(
+        ",",
+      ),
+    );
+  }
+  if (filters.unit) next.set("unit", filters.unit);
+  if (filters.maxKm != null && filters.maxKm > 0) {
+    next.set("maxKm", String(filters.maxKm));
+  }
+  const sort = filters.sort ?? "score";
+  const order = filters.order ?? "desc";
+  if (!(sort === "score" && order !== "asc")) next.set("sort", sort);
+  if (!(sort === "score" && order === "desc")) next.set("order", order);
+  return next;
+}
+
+export function painelHref(filters: RankingFilters): string {
+  const next = rankingSearchParams(filters);
   return next.size > 0 ? `/?${next}` : "/";
+}
+
+export function parseRankingFilters(
+  input: string | URLSearchParams,
+): RankingFilters {
+  const params =
+    typeof input === "string" ? paramsFromSearch(input) : input;
+  const sort = params.get("sort") ?? undefined;
+  const maxKm = parseMaxKm(params.get("maxKm"));
+  const unit = parseOne(params.get("unit"), DISTANCE_UNITS);
+  return {
+    campaign: emptyToUndef(params.get("campaign")),
+    discipline: emptyToUndef(params.get("discipline")),
+    search: emptyToUndef(params.get("search")),
+    sort: sort && SORT_KEYS.includes(sort) ? sort : "score",
+    order: params.get("order") === "asc" ? "asc" : "desc",
+    has: parseCsv(params.get("has"), HAS_SCORE_KEYS),
+    ingles: parseCsv(params.get("ingles"), ENGLISH_LETTERS),
+    unit,
+    maxKm,
+  };
+}
+
+export function parseRankingFiltersFromRecord(
+  record: Record<string, string | string[] | undefined>,
+): RankingFilters {
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(record)) {
+    if (typeof value === "string" && value) params.set(key, value);
+    else if (Array.isArray(value) && value.length) {
+      params.set(key, value.filter(Boolean).join(","));
+    }
+  }
+  return parseRankingFilters(params);
+}
+
+function paramsFromSearch(search: string): URLSearchParams {
+  if (search.startsWith("/")) {
+    const q = search.indexOf("?");
+    return new URLSearchParams(q >= 0 ? search.slice(q + 1) : "");
+  }
+  return new URLSearchParams(search.startsWith("?") ? search.slice(1) : search);
+}
+
+function emptyToUndef(value: string | null): string | undefined {
+  return value ? value : undefined;
+}
+
+function parseOne<T extends string>(
+  raw: string | null,
+  allowed: readonly T[],
+): T | undefined {
+  if (!raw) return undefined;
+  return (allowed as readonly string[]).includes(raw) ? (raw as T) : undefined;
+}
+
+function parseCsv<T extends string>(
+  raw: string | null,
+  allowed: readonly T[],
+): T[] | undefined {
+  if (!raw) return undefined;
+  const allowedSet = new Set<string>(allowed);
+  const out: T[] = [];
+  for (const part of raw.split(",")) {
+    const value = part.trim();
+    if (!allowedSet.has(value) || out.includes(value as T)) continue;
+    out.push(value as T);
+  }
+  const ordered = allowed.filter((item) => out.includes(item));
+  return ordered.length ? [...ordered] : undefined;
+}
+
+function parseMaxKm(raw: string | null): number | undefined {
+  if (!raw || !/^\d+$/.test(raw)) return undefined;
+  const n = Number(raw);
+  if (n < 1 || n > 500) return undefined;
+  return n;
 }

@@ -3,15 +3,15 @@ import { CandidateProfile } from "@/components/candidate/profile";
 import { requireStaff } from "@/lib/auth/staff";
 import { buildProfileViewModel } from "@/lib/candidate/view-model";
 import { getCandidateDetail } from "@/lib/queries/candidate-detail";
-import {
-  getRankingNeighborIds,
-  type RankingFilters,
-} from "@/lib/queries/ranking";
+import { getRankingNeighborIds } from "@/lib/queries/ranking";
 import {
   getDisciplinePositions,
   getScoredApplications,
 } from "@/lib/queries/scored-applications";
-import { SORT_KEYS } from "@/lib/ranking-sort";
+import {
+  parseRankingFiltersFromRecord,
+  rankingSearchParams,
+} from "@/lib/ranking-sort";
 
 export default async function CandidateProfilePage({
   params,
@@ -34,21 +34,8 @@ export default async function CandidateProfilePage({
     detail.defaultApplicationId ??
     detail.applications[0]?.id;
 
-  const sort = str("sort");
-  const rankingFilters: RankingFilters = {
-    campaign: str("campaign"),
-    discipline: str("discipline"),
-    search: str("search"),
-    sort: sort && SORT_KEYS.includes(sort) ? sort : "score",
-    order: str("order") === "asc" ? "asc" : "desc",
-  };
-
-  const rankingQuery = new URLSearchParams(
-    Object.entries(rankingFilters).filter(([, v]) => Boolean(v)) as [
-      string,
-      string,
-    ][],
-  ).toString();
+  const rankingFilters = parseRankingFiltersFromRecord(query);
+  const rankingQuery = rankingSearchParams(rankingFilters).toString();
 
   // Uma passada só pontua o banco inteiro; posição na disciplina e vizinhos no
   // Painel saem dela sem nenhuma consulta a mais (`cache` do React deduplica).

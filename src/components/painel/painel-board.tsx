@@ -12,7 +12,8 @@ import type { RankingRow } from "@/lib/queries/ranking";
 import {
   applyRankingFilters,
   painelHref,
-  SORT_KEYS,
+  parseRankingFilters,
+  rankingSearchParams,
   type RankingFilters,
 } from "@/lib/ranking-sort";
 import { formatScore } from "@/lib/scoring";
@@ -68,20 +69,6 @@ const COLUMNS = [
   },
   { key: "status", label: "Status", width: "7.5rem", align: "center" as const, sortKey: "status" },
 ];
-
-function filtersFromSearch(search: string): RankingFilters {
-  const params = new URLSearchParams(
-    search.startsWith("?") ? search.slice(1) : search,
-  );
-  const sort = params.get("sort") ?? undefined;
-  return {
-    campaign: params.get("campaign") ?? undefined,
-    discipline: params.get("discipline") ?? undefined,
-    search: params.get("search") ?? undefined,
-    sort: sort && SORT_KEYS.includes(sort) ? sort : "score",
-    order: params.get("order") === "asc" ? "asc" : "desc",
-  };
-}
 
 /**
  * Island do Painel: recebe o banco pontuado UMA vez e filtra/ordena no
@@ -174,20 +161,11 @@ export function PainelBoard({
     [baseRows, overlay],
   );
 
-  const [filters, setFilters] = useState<RankingFilters>(() => ({
-    campaign: initialFilters.campaign,
-    discipline: initialFilters.discipline,
-    search: initialFilters.search,
-    sort:
-      initialFilters.sort && SORT_KEYS.includes(initialFilters.sort)
-        ? initialFilters.sort
-        : "score",
-    order: initialFilters.order === "asc" ? "asc" : "desc",
-  }));
+  const [filters, setFilters] = useState<RankingFilters>(initialFilters);
 
   useEffect(() => {
     function onPopState() {
-      setFilters(filtersFromSearch(window.location.search));
+      setFilters(parseRankingFilters(window.location.search));
     }
     window.addEventListener("popstate", onPopState);
     return () => window.removeEventListener("popstate", onPopState);
@@ -214,11 +192,16 @@ export function PainelBoard({
 
   const patchFilters = useCallback((patch: Partial<RankingFilters>) => {
     setFilters((prev) => {
-      const next: RankingFilters = { ...prev };
+      const next: RankingFilters = { ...prev, ...patch };
       for (const key of Object.keys(patch) as Array<keyof RankingFilters>) {
-        const value = patch[key];
-        if (value === undefined || value === "") delete next[key];
-        else next[key] = value;
+        const value = next[key];
+        if (
+          value === undefined ||
+          value === "" ||
+          (Array.isArray(value) && value.length === 0)
+        ) {
+          delete next[key];
+        }
       }
       if (!next.sort) next.sort = "score";
       if (!next.order) next.order = "desc";
@@ -232,12 +215,7 @@ export function PainelBoard({
   );
 
   const rowQuery = useMemo(() => {
-    const q = new URLSearchParams(
-      Object.entries(filters).filter(([, v]) => Boolean(v)) as [
-        string,
-        string,
-      ][],
-    );
+    const q = rankingSearchParams(filters);
     q.set("fromRanking", "1");
     return q.toString();
   }, [filters]);
