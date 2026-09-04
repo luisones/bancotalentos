@@ -55,6 +55,6 @@ export async function createCandidate(input: CreateCandidateInput) {
   });
 
   revalidatePath("/");
-  revalidatePath("/ranking");
+  revalidatePath("/(app)", "page");
   return { success: true, candidateId: candidate.id };
 }

@@ -45,20 +45,59 @@ const LESSON_CRITERIA = [
   "Confiança",
 ];
 
+/**
+ * Ordem de leitura da página do professor: AT · DO · DD · CD · CO · VD.
+ *
+ * `prova_conteudo` e `didatica_humana` não estão aqui: a primeira virou duas
+ * dimensões (a prova objetiva e a dissertativa, que a planilha de 2025
+ * misturava) e a segunda era o nome errado de `didatica_dissertativa`.
+ * `curriculo`, `entrevista` e `socioemocional` nunca tiveram nota em campanha
+ * nenhuma e ficam inativas em vez de diluir o Resultado.
+ */
 const DIMENSIONS: {
   code: (typeof schema.dimensionCodeEnum.enumValues)[number];
   name: string;
   sort: number;
+  group: string | null;
+  short: string | null;
+  active: boolean;
 }[] = [
-  { code: "prova_conteudo", name: "Prova de conteúdo", sort: 1 },
-  { code: "didatica_objetiva", name: "Didática objetiva", sort: 2 },
-  { code: "didatica_humana", name: "Didática humana", sort: 3 },
-  { code: "curriculo", name: "Currículo", sort: 4 },
-  { code: "video", name: "Vídeo", sort: 5 },
-  { code: "entrevista", name: "Entrevista", sort: 6 },
-  { code: "aula_teste", name: "Aula-teste", sort: 7 },
-  { code: "socioemocional", name: "Socioemocional", sort: 8 },
+  { code: "aula_teste",            name: "Aula-teste",             sort: 1,  group: null,        short: "AT", active: true },
+  { code: "didatica_objetiva",     name: "Didática objetiva",      sort: 2,  group: "didatica",  short: "DO", active: true },
+  { code: "didatica_dissertativa", name: "Didática dissertativa",  sort: 3,  group: "didatica",  short: "DD", active: true },
+  { code: "conteudo_dissertativa", name: "Conteúdo dissertativa",  sort: 4,  group: "conteudo",  short: "CD", active: true },
+  { code: "conteudo_objetiva",     name: "Conteúdo objetiva",      sort: 5,  group: "conteudo",  short: "CO", active: true },
+  { code: "video",                 name: "Vídeo",                  sort: 6,  group: null,        short: "VD", active: true },
+  { code: "curriculo",             name: "Currículo",              sort: 90, group: null,        short: null, active: false },
+  { code: "entrevista",            name: "Entrevista",             sort: 90, group: null,        short: null, active: false },
+  { code: "socioemocional",        name: "Socioemocional",         sort: 90, group: null,        short: null, active: false },
+  { code: "prova_conteudo",        name: "Prova de conteúdo",      sort: 90, group: null,        short: null, active: false },
+  { code: "didatica_humana",       name: "Didática humana",        sort: 90, group: null,        short: null, active: false },
 ];
+
+/** Peso de cada GRUPO no Resultado. Editável em /admin/pesos. */
+const GROUP_WEIGHTS: Record<string, string> = {
+  didatica: "0.3000",
+  conteudo: "0.3000",
+  aula_teste: "0.3000",
+  video: "0.1000",
+};
+
+/**
+ * Peso de cada PARTE dentro do grupo.
+ *
+ * O 1/2 de conteúdo é herdado da planilha de 2025 — `FINAL CONT = (OBJ + 2*DISC)/3`
+ * — e é o que faz a nota histórica de 68 candidaturas continuar significando a
+ * mesma coisa. O 1/1 de didática é o padrão neutro: a planilha misturava as
+ * duas por outra via (`(12*AprDisF + 17*AprObj)/29`) que o sistema
+ * deliberadamente não importa.
+ */
+const MEMBER_WEIGHTS: Record<string, string> = {
+  didatica_objetiva: "1.0000",
+  didatica_dissertativa: "1.0000",
+  conteudo_objetiva: "1.0000",
+  conteudo_dissertativa: "2.0000",
+};
 
 const CAMPAIGNS = [
   {
@@ -197,39 +236,56 @@ async function main() {
         code: dim.code,
         name: dim.name,
         sortOrder: dim.sort,
+        groupCode: dim.group,
+        shortCode: dim.short,
+        active: dim.active,
       })
       .onConflictDoUpdate({
         target: schema.dimensions.code,
-        set: { name: dim.name, sortOrder: dim.sort },
+        set: {
+          name: dim.name,
+          sortOrder: dim.sort,
+          groupCode: dim.group,
+          shortCode: dim.short,
+          active: dim.active,
+        },
       });
   }
 
   const dims = await db.select().from(schema.dimensions);
   const dimByCode = Object.fromEntries(dims.map((d) => [d.code, d]));
 
-  const existingWeights = await db.select().from(schema.weightConfigs).limit(1);
-  if (existingWeights.length === 0) {
+  // A configuração vigente é a de `valid_from` mais recente; nunca editamos uma
+  // existente, porque o histórico de pesos é o que torna uma nota antiga
+  // auditável. Aqui só criamos a v2 se ela ainda não existir.
+  const V2_LABEL = "Pesos v2 (grupos)";
+  const [existingV2] = await db
+    .select({ id: schema.weightConfigs.id })
+    .from(schema.weightConfigs)
+    .where(eq(schema.weightConfigs.label, V2_LABEL))
+    .limit(1);
+
+  if (!existingV2) {
     const [weightConfig] = await db
       .insert(schema.weightConfigs)
-      .values({ label: "Pesos iniciais v1 (igualitários)" })
+      .values({ label: V2_LABEL })
       .returning();
 
-    const equalWeight = (1 / 7).toFixed(4);
-    for (const code of [
-      "prova_conteudo",
-      "didatica_objetiva",
-      "didatica_humana",
-      "curriculo",
-      "video",
-      "entrevista",
-      "aula_teste",
-    ] as const) {
-      const dim = dimByCode[code];
-      if (dim && weightConfig) {
+    if (weightConfig) {
+      for (const [groupCode, weight] of Object.entries(GROUP_WEIGHTS)) {
+        await db.insert(schema.weightConfigItems).values({
+          weightConfigId: weightConfig.id,
+          groupCode,
+          weight,
+        });
+      }
+      for (const [code, weight] of Object.entries(MEMBER_WEIGHTS)) {
+        const dim = dimByCode[code];
+        if (!dim) continue;
         await db.insert(schema.weightConfigItems).values({
           weightConfigId: weightConfig.id,
           dimensionId: dim.id,
-          weight: equalWeight,
+          weight,
         });
       }
     }

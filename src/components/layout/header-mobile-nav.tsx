@@ -68,21 +68,17 @@ export function HeaderMobileNav({
               />
             ))}
 
-            {adminItems.length > 0 && (
-              <>
-                <div className="font-heading text-micro border-b border-rule bg-ground px-4 py-2 font-bold uppercase tracking-eyebrow text-label">
-                  Admin
-                </div>
-                {adminItems.map((item) => (
-                  <MobileLink
-                    key={item.href}
-                    item={item}
-                    pathname={pathname}
-                    onNavigate={() => setOpen(false)}
-                  />
-                ))}
-              </>
-            )}
+            {/* Lista plana: no celular não há espaço para um submenu, e a
+                faixa "Admin" separava duas telas do resto sem informar nada
+                que o próprio rótulo do item já não diga. */}
+            {adminItems.map((item) => (
+              <MobileLink
+                key={item.href}
+                item={item}
+                pathname={pathname}
+                onNavigate={() => setOpen(false)}
+              />
+            ))}
           </nav>
 
           {staff && (

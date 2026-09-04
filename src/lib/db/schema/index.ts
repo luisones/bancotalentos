@@ -56,6 +56,13 @@ export const documentTypeEnum = pgEnum("document_type", [
   "outro",
 ]);
 
+/**
+ * `prova_conteudo` e `didatica_humana` continuam no enum porque um valor de
+ * enum do Postgres não se remove — mas nenhuma linha aponta mais para eles:
+ * `prova_conteudo` virou `conteudo_objetiva` + `conteudo_dissertativa` e
+ * `didatica_humana` era o nome errado de `didatica_dissertativa`, a nota das
+ * respostas dissertativas produzida pelo ensemble de LLM.
+ */
 export const dimensionCodeEnum = pgEnum("dimension_code", [
   "prova_conteudo",
   "didatica_objetiva",
@@ -65,6 +72,26 @@ export const dimensionCodeEnum = pgEnum("dimension_code", [
   "entrevista",
   "aula_teste",
   "socioemocional",
+  "didatica_dissertativa",
+  "conteudo_objetiva",
+  "conteudo_dissertativa",
+]);
+
+/**
+ * Status único da candidatura. Funde os três eixos antigos (situação seletiva,
+ * etapa operacional, selo de talento) sob uma regra: o desfecho seletivo vence
+ * a etapa operacional, e a etapa só aparece enquanto não há desfecho.
+ */
+export const candidateStatusEnum = pgEnum("candidate_status", [
+  "novo",
+  "em_avaliacao",
+  "a_contatar",
+  "aula_teste_agendada",
+  "em_duvida",
+  "avancar",
+  "selecionado",
+  "nao_avancar",
+  "manter_no_banco",
 ]);
 
 export const applicationSourceEnum = pgEnum("application_source", [
@@ -172,9 +199,16 @@ export const candidates = pgTable(
     email: text("email"),
     phone: text("phone"),
     city: text("city"),
+    /** 8 dígitos, sem hífen — o formato dos workbooks de origem. */
+    postalCode: text("postal_code"),
+    /** `workbook` | `csv_2025`: de qual fonte o CEP veio. */
+    postalCodeSource: text("postal_code_source"),
     englishLevel: text("english_level"),
     origin: text("origin"),
     highlightedNote: text("highlighted_note"),
+    /** Modificador do status único, no lugar das 5 gradações do selo antigo. */
+    starred: boolean("starred").notNull().default(false),
+    /** @deprecated substituído por `starred`. Mantido até a limpeza física. */
     talentClassification: talentClassificationEnum("talent_classification")
       .notNull()
       .default("nao_classificado"),
@@ -186,7 +220,10 @@ export const candidates = pgTable(
       .defaultNow()
       .notNull(),
   },
-  (t) => [uniqueIndex("candidates_external_ref_idx").on(t.externalRef)],
+  (t) => [
+    uniqueIndex("candidates_external_ref_idx").on(t.externalRef),
+    index("candidates_postal_code_idx").on(t.postalCode),
+  ],
 );
 
 export const applications = pgTable(
@@ -198,9 +235,13 @@ export const applications = pgTable(
       .notNull(),
     campaignId: uuid("campaign_id").references(() => campaigns.id),
     disciplineId: uuid("discipline_id").references(() => disciplines.id),
+    /** Status único. Substitui `operationalStatus` + `selectiveStatus`. */
+    status: candidateStatusEnum("status").notNull().default("novo"),
+    /** @deprecated fundido em `status`. Mantido até a limpeza física. */
     operationalStatus: operationalStatusEnum("operational_status")
       .notNull()
       .default("novo"),
+    /** @deprecated fundido em `status`. Mantido até a limpeza física. */
     selectiveStatus: selectiveStatusEnum("selective_status")
       .notNull()
       .default("em_avaliacao"),
@@ -222,6 +263,7 @@ export const applications = pgTable(
     index("applications_campaign_id_idx").on(t.campaignId),
     index("applications_discipline_id_idx").on(t.disciplineId),
     index("applications_operational_status_idx").on(t.operationalStatus),
+    index("applications_status_idx").on(t.status),
     uniqueIndex("applications_external_ref_idx").on(t.externalRef),
   ],
 );
@@ -275,6 +317,15 @@ export const dimensions = pgTable("dimensions", {
   code: dimensionCodeEnum("code").notNull().unique(),
   name: text("name").notNull(),
   sortOrder: integer("sort_order").notNull().default(0),
+  /**
+   * `didatica` | `conteudo` | null. Dimensão com grupo não entra sozinha no
+   * Resultado: entra pela média ponderada do grupo a que pertence.
+   */
+  groupCode: text("group_code"),
+  /** `AT` `DO` `DD` `CD` `CO` `VD` — a fileira de pastilhas do perfil. */
+  shortCode: text("short_code"),
+  /** Dimensão fora de uso continua existindo para não órfãos os apontamentos. */
+  active: boolean("active").notNull().default(true),
 });
 
 export const instruments = pgTable("instruments", {
@@ -301,6 +352,16 @@ export const subjectiveAnswers = pgTable(
       .references(() => instruments.id)
       .notNull(),
     answerText: text("answer_text"),
+    /**
+     * Nota humana que substitui a do ensemble NESTA pergunta, na mesma escala
+     * dos provedores (0–30). Guardada ao lado, nunca por cima: `llm_evaluations`
+     * continua intacto e a divergência fica auditável.
+     */
+    overrideScore: numeric("override_score", { precision: 6, scale: 3 }),
+    overrideByStaffId: uuid("override_by_staff_id").references(
+      () => staffUsers.id,
+    ),
+    overrideAt: timestamp("override_at", { withTimezone: true }),
   },
   (t) => [index("subjective_answers_application_id_idx").on(t.applicationId)],
 );
@@ -646,13 +707,50 @@ export const weightConfigItems = pgTable(
     weightConfigId: uuid("weight_config_id")
       .references(() => weightConfigs.id)
       .notNull(),
-    dimensionId: uuid("dimension_id")
-      .references(() => dimensions.id)
-      .notNull(),
+    /**
+     * Peso de uma PARTE dentro do grupo (ex.: conteudo_dissertativa vale 2 e
+     * conteudo_objetiva vale 1, que é a fórmula (OBJ + 2*DISC)/3 da planilha de
+     * 2025 virando configuração). Exclusivo com `groupCode`.
+     */
+    dimensionId: uuid("dimension_id").references(() => dimensions.id),
+    /** Peso de um GRUPO no Resultado. Exclusivo com `dimensionId`. */
+    groupCode: text("group_code"),
     weight: numeric("weight", { precision: 6, scale: 4 }).notNull(),
   },
   (t) => [index("weight_config_items_config_id_idx").on(t.weightConfigId)],
 );
+
+/**
+ * Cache de geocodificação, por CEP e não por candidato: CEPs se repetem entre
+ * candidatos, e BrasilAPI/Nominatim são serviços públicos sem SLA. Nenhuma
+ * leitura da aplicação sai para a rede — ela só faz JOIN aqui.
+ */
+export const cepLocations = pgTable("cep_locations", {
+  cep: text("cep").primaryKey(),
+  lat: numeric("lat", { precision: 10, scale: 7 }),
+  lng: numeric("lng", { precision: 10, scale: 7 }),
+  city: text("city"),
+  uf: text("uf"),
+  /** `rua` | `bairro` | `cidade` — o grau de aproximação, exibido na UI. */
+  precision: text("precision"),
+  source: text("source"),
+  fetchedAt: timestamp("fetched_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+});
+
+export const cepDistances = pgTable("cep_distances", {
+  cep: text("cep")
+    .primaryKey()
+    .references(() => cepLocations.cep, { onDelete: "cascade" }),
+  kmSantoAndre: numeric("km_santo_andre", { precision: 8, scale: 2 }),
+  kmSaoCaetano: numeric("km_sao_caetano", { precision: 8, scale: 2 }),
+  /** `rodoviaria` (OSRM) | `linha_reta` (haversine, quando o roteador falha). */
+  mode: text("mode"),
+  computedAt: timestamp("computed_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+});
 
 export const importBatches = pgTable("import_batches", {
   id: uuid("id").defaultRandom().primaryKey(),

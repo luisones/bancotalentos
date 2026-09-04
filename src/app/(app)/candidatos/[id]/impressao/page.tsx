@@ -6,7 +6,11 @@ import { MicroHeader } from "@/components/liceu/surface";
 import { requireStaff } from "@/lib/auth/staff";
 import { buildProfileViewModel } from "@/lib/candidate/view-model";
 import { PRINT_SECTIONS, type PrintSectionId } from "@/lib/candidate/print";
-import { getCandidateProfile } from "@/lib/queries/candidate";
+import { getCandidateDetail } from "@/lib/queries/candidate-detail";
+import {
+  getDisciplinePositions,
+  getScoredApplications,
+} from "@/lib/queries/scored-applications";
 import { formatDate } from "@/lib/format";
 
 export default async function ImpressaoPage({
@@ -20,22 +24,37 @@ export default async function ImpressaoPage({
   const { id } = await params;
   const query = await searchParams;
 
-  const profile = await getCandidateProfile(id, staff.id);
-  if (!profile) notFound();
+  const detail = await getCandidateDetail(id, staff.id);
+  if (!detail) notFound();
+
+  const focusedId =
+    (typeof query.candidatura === "string" ? query.candidatura : undefined) ??
+    detail.defaultApplicationId ??
+    detail.applications[0]?.id;
+
+  const [{ byApplicationId }, positions] = await Promise.all([
+    getScoredApplications(staff.id),
+    focusedId
+      ? getDisciplinePositions(focusedId, staff.id)
+      : Promise.resolve({ campaign: null, bank: null }),
+  ]);
 
   const vm = buildProfileViewModel({
-    profile,
+    detail,
+    scored: focusedId ? byApplicationId.get(focusedId) : undefined,
+    positions,
     staff,
-    focusedApplicationId:
-      typeof query.candidatura === "string" ? query.candidatura : undefined,
+    focusedApplicationId: focusedId,
   });
 
   const raw = typeof query.secoes === "string" ? query.secoes : null;
   const selected = new Set<PrintSectionId>(
     raw
-      ? (raw.split(",").filter((s) =>
-          PRINT_SECTIONS.some((p) => p.id === s),
-        ) as PrintSectionId[])
+      ? (raw
+          .split(",")
+          .filter((s) =>
+            PRINT_SECTIONS.some((p) => p.id === s),
+          ) as PrintSectionId[])
       : PRINT_SECTIONS.filter((p) => p.defaultOn).map((p) => p.id),
   );
   const assinaturas = query.assinaturas === "1";
@@ -55,9 +74,7 @@ export default async function ImpressaoPage({
             Liceu Jardim
           </span>
           <div className="text-meta text-right leading-relaxed text-ink-3">
-            <p className="font-semibold text-navy">
-              Banco de Talentos Docentes
-            </p>
+            <p className="font-semibold text-navy">Banco de Talentos Docentes</p>
             <p>Documento interno de acompanhamento de processo seletivo</p>
             <p>
               Emitido em {formatDate(new Date())} por {staff.name}
@@ -87,29 +104,54 @@ export default async function ImpressaoPage({
             labelWidth={140}
             rows={[
               { label: "Nome", value: vm.identity.name },
+              {
+                label: "Disciplina",
+                value: vm.identity.disciplineName ?? "—",
+              },
               { label: "E-mail", value: vm.identity.email ?? "—" },
               { label: "Telefone", value: vm.identity.phone ?? "—" },
-              { label: "Situação seletiva", value: vm.identity.selective.label },
-              { label: "Etapa operacional", value: vm.identity.operational.label },
               {
-                label: "Selo de talento",
-                value: vm.identity.classification.label,
+                label: "Status",
+                value: `${vm.identity.statusLabel}${vm.identity.starred ? " · destaque da equipe" : ""}`,
+              },
+              {
+                label: "Posição na disciplina",
+                value:
+                  vm.identity.positions.length > 0
+                    ? vm.identity.positions
+                        .map((p) => `${p.label} ${p.scope}`)
+                        .join(" · ")
+                    : "sem posição — ainda não há Resultado",
+              },
+              { label: "Inglês", value: vm.identity.englishLevel ?? "—" },
+              {
+                label: "Distância até as unidades",
+                value:
+                  vm.identity.distances.santoAndre &&
+                  vm.identity.distances.saoCaetano
+                    ? `Santo André ${vm.identity.distances.santoAndre} · São Caetano ${vm.identity.distances.saoCaetano}`
+                    : "sem CEP cadastrado",
               },
             ]}
           />
+          {vm.identity.distances.note && (
+            <p className="text-meta mt-1 text-ink-3">
+              Distâncias: {vm.identity.distances.note}.
+            </p>
+          )}
         </section>
 
-        {selected.has("avaliacao") && (
+        {selected.has("notas") && (
           <section className="mb-6 break-inside-avoid">
-            <MicroHeader>Avaliação e resultado</MicroHeader>
+            <MicroHeader>Notas e resultado</MicroHeader>
             <table className="w-full">
               <thead>
                 <tr className="border-b border-rule-strong">
                   <th className="text-micro py-1.5 text-left uppercase tracking-micro text-label">
-                    Dimensão
+                    Item
                   </th>
                   <th className="text-micro py-1.5 text-left uppercase tracking-micro text-label">
-                    Origem
+                    Partes
                   </th>
                   <th className="text-micro py-1.5 text-right uppercase tracking-micro text-label">
                     Nota
@@ -117,17 +159,23 @@ export default async function ImpressaoPage({
                 </tr>
               </thead>
               <tbody>
-                {vm.evaluation.dimensions.map((d) => (
-                  <tr key={d.dimensionId} className="border-b border-rule-weak">
-                    <td className="text-cell py-1.5">{d.name}</td>
+                {vm.scores.cards.map((card) => (
+                  <tr key={card.code} className="border-b border-rule-weak">
+                    <td className="text-cell py-1.5">{card.label}</td>
                     <td className="text-note py-1.5 text-ink-3">
-                      {/* Avaliação cega não revelada NUNCA entra no papel. */}
-                      {d.hiddenPeers > 0
-                        ? "Avaliações ocultas (avaliação cega)"
-                        : d.originLabel}
+                      {card.parts.length > 0
+                        ? card.parts
+                            .map(
+                              (p) =>
+                                `${p.label}: ${p.score === null ? "não aplicada" : p.display}`,
+                            )
+                            .join(" · ")
+                        : card.score === null
+                          ? "não aplicado"
+                          : "—"}
                     </td>
                     <td className="text-cell py-1.5 text-right font-semibold tabular-nums">
-                      {d.hiddenPeers > 0 ? "—" : d.display}
+                      {card.display}
                     </td>
                   </tr>
                 ))}
@@ -135,34 +183,48 @@ export default async function ImpressaoPage({
             </table>
             <p className="text-note mt-2 text-ink-3">
               Resultado consolidado{" "}
-              <strong className="font-semibold">{vm.kpis[0]?.value}</strong>{" "}
-              sobre {vm.evaluation.coverage} de {vm.evaluation.totalDimensions}{" "}
-              dimensões. Dimensão ausente não conta como zero.
+              <strong className="font-semibold">{vm.scores.display}</strong>{" "}
+              sobre {vm.scores.coverage} de {vm.scores.totalDimensions} itens.
+              Item ausente não conta como zero.
             </p>
           </section>
         )}
 
         {selected.has("materiais") && (
-          <PrintList
-            title="Currículo, vídeo e materiais"
-            rows={vm.materials.documents.map((d) => ({
-              left: d.typeLabel,
-              middle: d.description ?? "",
-              right: d.date ?? "",
-            }))}
-            empty="Nenhum material anexado."
-          />
+          <section className="mb-6 break-inside-avoid">
+            <MicroHeader>Currículo e vídeo</MicroHeader>
+            <DefinitionList
+              labelWidth={140}
+              rows={[
+                {
+                  label: "Currículo",
+                  value: vm.materials.curriculoUrl ?? "não anexado",
+                },
+                {
+                  label: "Vídeo",
+                  value: vm.materials.videoUrl ?? "não anexado",
+                },
+              ]}
+            />
+          </section>
         )}
 
         {selected.has("respostas") && (
           <section className="mb-6">
-            <MicroHeader>Respostas às perguntas do processo</MicroHeader>
-            {vm.answers.items.length === 0 ? (
+            <MicroHeader>Respostas dissertativas</MicroHeader>
+            {vm.scores.answers.length === 0 ? (
               <p className="text-note text-ink-3">Nenhuma resposta registrada.</p>
             ) : (
-              vm.answers.items.map((a) => (
-                <div key={a.id} className="mb-3 break-inside-avoid">
-                  <p className="text-cell font-semibold text-navy">{a.prompt}</p>
+              vm.scores.answers.map((a) => (
+                <div key={a.answerId} className="mb-3 break-inside-avoid">
+                  <p className="text-cell font-semibold text-navy">
+                    {a.order}. {a.prompt}
+                    <span className="float-right tabular-nums">
+                      {a.effectivePercent === null
+                        ? "—"
+                        : `${Math.round(a.effectivePercent)}%`}
+                    </span>
+                  </p>
                   <p className="text-note whitespace-pre-wrap leading-relaxed text-ink-2">
                     {a.text}
                   </p>
@@ -172,61 +234,37 @@ export default async function ImpressaoPage({
           </section>
         )}
 
-        {selected.has("etapas") && (
-          <PrintList
-            title="Entrevista e aula-teste"
-            rows={vm.stages.schedules.map((s) => ({
-              left: s.typeLabel,
-              middle: s.location ?? "",
-              right: `${s.date} · ${s.statusLabel}`,
-            }))}
-            empty="Nenhuma entrevista ou aula-teste registrada."
-          />
-        )}
-
         {selected.has("praticas") && (
           <PrintList
-            title="Práticas pedagógicas declaradas"
-            rows={vm.practices.items.map((p) => ({
+            title="Práticas declaradas"
+            rows={vm.scores.practices.map((p) => ({
               left: p.label,
               middle: p.direction ?? "",
-              right: p.score,
+              right: p.display,
             }))}
             empty="Nenhuma prática declarada."
           />
         )}
 
-        {selected.has("historico") && vm.history.rows.length > 1 && (
-          <PrintList
-            title="Histórico de candidaturas"
-            rows={vm.history.rows.map((r) => ({
-              left: `${r.campaignName} · ${r.disciplineName}`,
-              middle: r.selectiveLabel,
-              right: `${r.score} (${r.coverage})`,
-            }))}
-            empty=""
-          />
-        )}
-
-        {selected.has("contatos") && (
-          <PrintList
-            title="Contatos"
-            rows={vm.contacts.items.map((c) => ({
-              left: c.date,
-              middle: `${c.channel} · ${c.result}${c.note ? ` — ${c.note}` : ""}`,
-              right: c.author,
-            }))}
-            empty="Nenhum contato registrado."
-          />
+        {selected.has("candidato") && (
+          <section className="mb-6 break-inside-avoid">
+            <MicroHeader>Diferencial e observação do candidato</MicroHeader>
+            <p className="text-note whitespace-pre-wrap leading-relaxed text-ink-2">
+              {vm.materials.differential ?? "Nenhum diferencial escrito."}
+            </p>
+            <p className="text-note mt-2 whitespace-pre-wrap leading-relaxed text-ink-2">
+              {vm.materials.candidateObservation ?? "Nenhuma observação escrita."}
+            </p>
+          </section>
         )}
 
         {selected.has("observacoes") && (
           <section className="mb-6">
-            <MicroHeader>Observações internas</MicroHeader>
-            {vm.notes.items.length === 0 ? (
+            <MicroHeader>Observações da equipe</MicroHeader>
+            {vm.notes.length === 0 ? (
               <p className="text-note text-ink-3">Nenhuma observação.</p>
             ) : (
-              vm.notes.items.map((n) => (
+              vm.notes.map((n) => (
                 <div key={n.id} className="mb-2.5 break-inside-avoid">
                   <p className="text-note whitespace-pre-wrap leading-relaxed text-ink-2">
                     {n.body}
@@ -240,26 +278,11 @@ export default async function ImpressaoPage({
           </section>
         )}
 
-        {selected.has("auditoria") && (
-          <PrintList
-            title="Registro de auditoria"
-            rows={vm.audit.items.map((a) => ({
-              left: a.date,
-              middle: `${a.action}${a.detail ? ` — ${a.detail}` : ""}`,
-              right: a.author,
-            }))}
-            empty="Nenhum evento registrado."
-          />
-        )}
-
         {assinaturas && (
           <section className="mt-10 break-inside-avoid">
             <div className="grid gap-10 sm:grid-cols-2">
               {["Coordenação pedagógica", "Direção geral"].map((role) => (
-                <div
-                  key={role}
-                  className="border-t border-ink pt-1.5 text-center"
-                >
+                <div key={role} className="border-t border-ink pt-1.5 text-center">
                   <p className="text-note font-semibold">{role}</p>
                 </div>
               ))}
@@ -271,8 +294,6 @@ export default async function ImpressaoPage({
           Documento de circulação interna. Contém dados pessoais de candidatos —
           a impressão deve ser controlada conforme a política de privacidade do
           Liceu Jardim.
-          {vm.evaluation.dimensions.some((d) => d.hiddenPeers > 0) &&
-            " Avaliações sob avaliação cega não reveladas foram omitidas deste documento."}
         </footer>
 
         <p className="text-meta mt-4 text-subtle print:hidden">
@@ -298,9 +319,7 @@ function PrintList({
     <section className="mb-6 break-inside-avoid">
       <MicroHeader>{title}</MicroHeader>
       {rows.length === 0 ? (
-        empty ? (
-          <p className="text-note text-ink-3">{empty}</p>
-        ) : null
+        <p className="text-note text-ink-3">{empty}</p>
       ) : (
         rows.map((r, i) => (
           <div

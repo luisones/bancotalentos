@@ -10,6 +10,26 @@ export type GridColumn = {
   align?: "start" | "center" | "end";
   /** Aplica tabular-nums automaticamente. */
   numeric?: boolean;
+  /**
+   * Chave de ordenação. Presente = o cabeçalho vira link e ordena por esta
+   * coluna. Ausente = cabeçalho inerte.
+   */
+  sortKey?: string;
+  /**
+   * Some quando a linha empilha no celular. Com dez colunas, empilhar tudo
+   * produz um bloco que ninguém lê — o registro no celular fica com o
+   * essencial.
+   */
+  hideOnStack?: boolean;
+};
+
+export type SortState = {
+  /** `sortKey` da coluna ativa. */
+  key: string;
+  /** `desc` é o padrão em coluna de nota: a maior primeiro. */
+  order: "asc" | "desc";
+  /** Monta a URL de ordenar por `key` na direção `order`. */
+  hrefFor: (key: string, order: "asc" | "desc") => string;
 };
 
 const alignClass = {
@@ -33,6 +53,8 @@ export function DataGrid({
   minWidth,
   caption,
   empty,
+  sort,
+  stickyHeader,
   children,
   className,
 }: {
@@ -41,6 +63,10 @@ export function DataGrid({
   minWidth?: number;
   caption?: string;
   empty?: React.ReactNode;
+  /** Ordenação por cabeçalho. Ausente = cabeçalhos inertes. */
+  sort?: SortState;
+  /** Congela o cabeçalho abaixo do header do app durante a rolagem. */
+  stickyHeader?: boolean;
   children?: React.ReactNode;
   className?: string;
 }) {
@@ -60,23 +86,73 @@ export function DataGrid({
       )}
       <div className={minWidth ? "overflow-x-auto" : undefined}>
         <div className={minWidth ? "min-w-[var(--dg-min)]" : undefined}>
-          <div className="grid gap-3 border-b border-rule-strong px-3 pb-2 [grid-template-columns:var(--dg-cols)] @max-md:hidden">
+          <div
+            className={cn(
+              "grid gap-3 border-b border-rule-strong px-3 pb-2 [grid-template-columns:var(--dg-cols)] @max-md:hidden",
+              // Opaco de propósito: transparente, as linhas passariam por baixo.
+              stickyHeader && "sticky top-header z-10 bg-card pt-2",
+            )}
+          >
             {columns.map((c) => (
-              <div
-                key={c.key}
-                className={cn(
-                  "font-heading text-micro font-bold uppercase tracking-micro text-label",
-                  alignClass[c.align ?? "start"],
-                )}
-              >
-                {c.label}
-              </div>
+              <HeaderCell key={c.key} column={c} sort={sort} />
             ))}
           </div>
           {hasRows ? children : empty}
         </div>
       </div>
     </div>
+  );
+}
+
+/**
+ * Cabeçalho de coluna. Ordenável vira `<Link>` — Server Component, sem um byte
+ * de JS de cliente para uma interação que é, literalmente, navegar para outra
+ * ordenação da mesma lista.
+ */
+function HeaderCell({
+  column,
+  sort,
+}: {
+  column: GridColumn;
+  sort?: SortState;
+}) {
+  const base = cn(
+    "font-heading text-micro font-bold uppercase tracking-micro text-label",
+    alignClass[column.align ?? "start"],
+  );
+
+  if (!sort || !column.sortKey) {
+    return <div className={base}>{column.label}</div>;
+  }
+
+  const active = sort.key === column.sortKey;
+  // Clicar na coluna ativa inverte; clicar numa nova começa decrescente, que é
+  // o que se quer de uma coluna de nota ou de posição.
+  const nextOrder = active && sort.order === "desc" ? "asc" : "desc";
+
+  return (
+    <a
+      href={sort.hrefFor(column.sortKey, nextOrder)}
+      // `aria-sort` pertence à célula de cabeçalho, não ao link dentro dela —
+      // e este grid não tem role de tabela. A direção vai no texto acessível.
+      className={cn(
+        base,
+        "inline-flex items-center gap-1 hover:text-navy",
+        column.align === "end" && "justify-end",
+        column.align === "center" && "justify-center",
+        active && "text-navy",
+      )}
+    >
+      {column.label}
+      <span aria-hidden className={active ? "text-gold-text" : "opacity-0"}>
+        {sort.order === "asc" ? "▲" : "▼"}
+      </span>
+      <span className="sr-only">
+        {active
+          ? `ordenado por ${column.label}, ${sort.order === "asc" ? "crescente" : "decrescente"}. Ativar para inverter.`
+          : `ordenar por ${column.label}`}
+      </span>
+    </a>
   );
 }
 
@@ -142,6 +218,8 @@ export function Cell({
   muted,
   /** Rótulo mostrado só quando a linha empilha no celular. */
   stackLabel,
+  /** Some quando a linha empilha. Espelha `GridColumn.hideOnStack`. */
+  hideOnStack,
   className,
 }: {
   children: React.ReactNode;
@@ -149,6 +227,7 @@ export function Cell({
   numeric?: boolean;
   muted?: boolean;
   stackLabel?: string;
+  hideOnStack?: boolean;
   className?: string;
 }) {
   return (
@@ -158,6 +237,7 @@ export function Cell({
         "text-cell min-w-0",
         alignClass[align],
         "@max-md:!text-left",
+        hideOnStack && "@max-md:hidden",
         muted && "text-muted-foreground",
         className,
       )}

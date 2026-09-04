@@ -53,14 +53,46 @@ export const contactResultLabels: Record<string, string> = {
 };
 
 export const dimensionLabels: Record<string, string> = {
-  prova_conteudo: "Prova de conteúdo",
+  aula_teste: "Aula-teste",
   didatica_objetiva: "Didática objetiva",
+  didatica_dissertativa: "Didática dissertativa",
+  conteudo_dissertativa: "Conteúdo dissertativa",
+  conteudo_objetiva: "Conteúdo objetiva",
+  video: "Vídeo",
+  // Fora de uso, mantidas para traduzir registro antigo de auditoria.
+  prova_conteudo: "Prova de conteúdo",
   didatica_humana: "Didática humana",
   curriculo: "Currículo",
-  video: "Vídeo",
   entrevista: "Entrevista",
-  aula_teste: "Aula-teste",
   socioemocional: "Socioemocional",
+};
+
+/** Os itens que o Resultado pondera: dois grupos e duas dimensões soltas. */
+export const dimensionGroupLabels: Record<string, string> = {
+  didatica: "Didática",
+  conteudo: "Conteúdo",
+};
+
+/** Rótulo de um item ponderado, seja ele grupo ou dimensão solta. */
+export function scoringItemLabel(code: string): string {
+  return dimensionGroupLabels[code] ?? labelFor(dimensionLabels, code);
+}
+
+/**
+ * Status único da candidatura. Funde os três eixos antigos; o desfecho
+ * seletivo vence a etapa operacional, e a etapa só aparece enquanto não há
+ * desfecho.
+ */
+export const candidateStatusLabels: Record<string, string> = {
+  novo: "Novo",
+  em_avaliacao: "Em avaliação",
+  a_contatar: "A contatar",
+  aula_teste_agendada: "Aula-teste agendada",
+  em_duvida: "Em dúvida",
+  avancar: "Avançar",
+  selecionado: "Selecionado",
+  nao_avancar: "Não avançar",
+  manter_no_banco: "Manter no banco",
 };
 
 export const scheduleTypeLabels: Record<string, string> = {
@@ -79,9 +111,11 @@ export const scheduleStatusLabels: Record<string, string> = {
 
 export const auditActionLabels: Record<string, string> = {
   candidate_created: "Candidato cadastrado",
-  classification_updated: "Classificação de talento alterada",
+  starred_updated: "Destaque da equipe alterado",
   status_updated: "Situação alterada",
   evaluation_saved: "Avaliação registrada",
+  answer_override: "Nota de uma pergunta substituída",
+  weights_updated: "Pesos do Resultado alterados",
   quick_note_updated: "Nota rápida alterada",
   blind_peek: "Avaliações dos colegas reveladas",
   blind_peek_dimension: "Avaliações dos colegas reveladas em uma dimensão",

@@ -1,22 +1,16 @@
-import type { SummaryItem } from "@/components/liceu/section-summary";
-import type { AttentionPoint } from "@/lib/candidate/attention-points";
 import type { Tone } from "@/lib/tone";
 
 /**
  * View model do perfil.
  *
- * As 22 props de `ProfileTabs` viram cinco campos, e toda derivação (rótulos,
- * linhas-resumo, tons, datas) acontece no SERVIDOR. O componente de seção só
- * renderiza — não calcula, não normaliza, não traduz código cru.
+ * Toda derivação — rótulos, formatação, tons, posições — acontece no SERVIDOR.
+ * Os componentes só renderizam: não calculam, não normalizam, não traduzem
+ * código cru.
+ *
+ * O modelo encolheu junto com a página. Sumiram `kpis`, `attention`, `stages`,
+ * `history`, `contacts`, `audit` e `defaultOpen`: eram dez seções em acordeão
+ * para responder uma pergunta que cabe em quatro faixas.
  */
-
-export type Badge = { label: string; tone: Tone };
-
-export type FocusedApplication = {
-  applicationId: string;
-  /** "EFAF-EM 2025 · História" — o chip de escopo das seções. */
-  label: string;
-};
 
 export type Viewer = {
   staffId: string;
@@ -24,27 +18,99 @@ export type Viewer = {
   isAdmin: boolean;
 };
 
-/** Avaliação do usuário numa dimensão. Nunca contém dados de terceiros. */
+export type FocusedApplication = {
+  applicationId: string;
+  /** "2026 SCS · História" — o escopo ao qual as notas pertencem. */
+  label: string;
+};
+
+/** Avaliação do próprio usuário numa dimensão. Nunca contém dados de terceiros. */
 export type OwnScore = {
   score: number;
   comment: string | null;
   updatedAt: string;
 };
 
-export type DimensionView = {
-  dimensionId: string;
+/** Uma pastilha da fileira de instrumentos: acesa quando há nota. */
+export type InstrumentBadge = {
+  code: string;
+  /** `AT` `DO` `DD` `CD` `CO` `VD` */
+  shortCode: string;
   name: string;
-  /** null nunca é 0: a dimensão simplesmente não entra no cálculo. */
+  score: number | null;
+  display: string;
+  applied: boolean;
+};
+
+export type Position = {
+  /** "2º de 12" */
+  label: string;
+  /** "na campanha" | "no banco" */
+  scope: string;
+};
+
+/** Uma das quatro notas-folha, com o detalhe que o cartão abre. */
+export type ScorePart = {
+  code: string;
+  shortCode: string;
+  label: string;
+  score: number | null;
+  display: string;
+  positions: Position[];
+  dimensionId: string;
+  own: OwnScore | null;
+};
+
+export type LessonTestView = {
+  id: string;
+  evaluatorName: string;
+  date: string | null;
+  comment: string | null;
+  criteria: Array<{ name: string; display: string }>;
+};
+
+export type AnswerView = {
+  answerId: string;
+  order: string;
+  prompt: string;
+  text: string;
+  /** 0–100. `null` quando a pergunta não foi avaliada. */
+  ensemblePercent: number | null;
+  overridePercent: number | null;
+  effectivePercent: number | null;
+};
+
+export type PracticeView = {
+  code: string;
+  label: string;
+  /** "Favorável à aprendizagem" | "Desfavorável à aprendizagem" | null */
+  direction: string | null;
+  favorable: boolean;
+  display: string;
+};
+
+/**
+ * Um dos quatro cartões de nota.
+ *
+ * `kind` diz o que o cartão abre: os critérios da aula-teste, as 19 práticas,
+ * as 4 respostas dissertativas, ou nada.
+ */
+export type ScoreCard = {
+  code: string;
+  label: string;
   score: number | null;
   display: string;
   tone: Tone;
-  evaluatorCount: number;
-  /** Origem da nota, para o usuário saber de onde ela vem. */
-  originLabel: string;
+  /** Vazio nos cartões que não são grupo. */
+  parts: ScorePart[];
+  positions: Position[];
+  /** Dimensão a lançar quando o cartão aceita nota direta. */
+  dimensionId: string | null;
   own: OwnScore | null;
-  /** Notas de colegas existem mas estão ocultas pela avaliação cega. */
+  /** Quantas avaliações de colegas existem mas estão ocultas pela cegueira. */
   hiddenPeers: number;
-  peers: Array<{ evaluator: string; display: string; comment: string | null }>;
+  /** Texto do estado vazio, quando não há nota nem forma de calcular. */
+  emptyHint: string | null;
 };
 
 export type ProfileViewModel = {
@@ -53,159 +119,60 @@ export type ProfileViewModel = {
   focused: FocusedApplication | null;
 
   identity: {
-    eyebrow: string;
     name: string;
-    quickNote: string | null;
-    quickNoteAuthorship: string | null;
-    chips: string[];
-    selective: { label: string; tone: Tone; raw: string };
-    operational: { label: string; raw: string };
-    classification: { label: string; raw: string };
+    disciplineName: string | null;
+    campaignName: string | null;
+    campaignSlug: string | null;
+    status: string;
+    statusLabel: string;
+    starred: boolean;
+    positions: Position[];
     email: string | null;
     phone: string | null;
     whatsappUrl: string | null;
-    footnote: string | null;
+    quickNote: string | null;
+    englishLevel: string | null;
+    distances: {
+      santoAndre: string | null;
+      saoCaetano: string | null;
+      /** Explica a aproximação, quando há. */
+      note: string | null;
+    };
   };
 
-  kpis: Array<{ value: string; label: string; note?: string; tone?: Tone }>;
-  attention: AttentionPoint[];
+  instruments: InstrumentBadge[];
+
+  scores: {
+    consolidated: number | null;
+    display: string;
+    coverage: number;
+    totalDimensions: number;
+    /** O consolidado exibido difere do real por causa da avaliação cega. */
+    blindPartial: boolean;
+    cards: ScoreCard[];
+    lessonTests: LessonTestView[];
+    answers: AnswerView[];
+    practices: PracticeView[];
+  };
+
+  materials: {
+    curriculoUrl: string | null;
+    videoUrl: string | null;
+    /** Texto do candidato — não é observação da equipe. */
+    differential: string | null;
+    candidateObservation: string | null;
+  };
+
+  notes: Array<{
+    id: string;
+    body: string;
+    author: string;
+    date: string;
+  }>;
 
   applications: Array<{
     applicationId: string;
     label: string;
     sub: string;
   }>;
-
-  evaluation: {
-    summary: SummaryItem[];
-    dimensions: DimensionView[];
-    coverage: number;
-    totalDimensions: number;
-    ownPending: string[];
-    /** O consolidado exibido difere do real por causa da cegueira. */
-    blindPartial: boolean;
-  };
-
-  materials: {
-    summary: SummaryItem[];
-    hasCurriculo: boolean;
-    hasVideo: boolean;
-    documents: Array<{
-      id: string;
-      typeLabel: string;
-      openLabel: string;
-      description: string | null;
-      date: string | null;
-      url: string | null;
-    }>;
-  };
-
-  answers: {
-    summary: SummaryItem[];
-    items: Array<{
-      id: string;
-      order: string;
-      prompt: string;
-      text: string;
-      scaleNote: string;
-    }>;
-  };
-
-  stages: {
-    summary: SummaryItem[];
-    badge?: Badge;
-    schedules: Array<{
-      id: string;
-      typeLabel: string;
-      date: string;
-      location: string | null;
-      statusLabel: string;
-      overdue: boolean;
-    }>;
-    lessonTests: Array<{
-      id: string;
-      evaluatorName: string;
-      date: string;
-      comment: string | null;
-      criteria: Array<{ name: string; score: string }>;
-    }>;
-  };
-
-  practices: {
-    summary: SummaryItem[];
-    items: Array<{
-      code: string;
-      label: string;
-      direction: string | null;
-      score: string;
-    }>;
-  };
-
-  application: {
-    summary: SummaryItem[];
-    enrollment: Array<{ label: string; value: string }>;
-    interests: string[];
-    potentials: string[];
-    tags: string[];
-    activeFlags: string[];
-    observation: string | null;
-    differential: string | null;
-    selectiveStatus: string;
-    operationalStatus: string;
-  };
-
-  history: {
-    summary: SummaryItem[];
-    campaignCount: number;
-    rows: Array<{
-      applicationId: string;
-      campaignName: string;
-      disciplineName: string;
-      appliedAt: string;
-      score: string;
-      coverage: string;
-      selectiveLabel: string;
-    }>;
-  };
-
-  contacts: {
-    summary: SummaryItem[];
-    badge?: Badge;
-    items: Array<{
-      id: string;
-      date: string;
-      channel: string;
-      result: string;
-      note: string | null;
-      author: string;
-    }>;
-  };
-
-  notes: {
-    summary: SummaryItem[];
-    badge?: Badge;
-    items: Array<{
-      id: string;
-      body: string;
-      author: string;
-      date: string;
-      highlighted: boolean;
-    }>;
-  };
-
-  audit: {
-    summary: SummaryItem[];
-    badge?: Badge;
-    items: Array<{
-      id: string;
-      date: string;
-      action: string;
-      detail: string | null;
-      author: string;
-      isPeek: boolean;
-    }>;
-  };
-
-  /** Seções que nascem abertas, calculado no servidor: útil sem JS. */
-  defaultOpen: string[];
 };

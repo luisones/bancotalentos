@@ -1,15 +1,16 @@
 "use server";
 
 import { eq } from "drizzle-orm";
-import { revalidatePath } from "next/cache";
 import { canWrite, requireStaff } from "@/lib/auth/staff";
 import { db } from "@/lib/db";
 import { QUICK_NOTE_MAX } from "@/lib/candidate/quick-note";
 import { err, ok, type ActionResult } from "./result";
+import { revalidateCandidateViews } from "./revalidate";
 import {
   applicationTags,
   applications,
   auditEvents,
+  candidateStatusEnum,
   candidates,
   contacts,
   notes,
@@ -42,7 +43,7 @@ export async function addContact(input: {
     note: input.note ?? null,
   });
 
-  revalidatePath(`/candidatos/${input.candidateId}`);
+  revalidateCandidateViews();
   return ok();
 }
 
@@ -63,28 +64,38 @@ export async function addNote(input: {
     isHighlighted: input.isHighlighted ?? false,
   });
 
-  revalidatePath(`/candidatos/${input.candidateId}`);
+  revalidateCandidateViews();
   return ok();
 }
 
+/**
+ * Status único da candidatura.
+ *
+ * Substitui a dupla situação seletiva + etapa operacional. Eram dois campos que
+ * a interface precisava explicar lado a lado para não serem confundidos; agora
+ * são um só valor, e a regra de precedência entre eles virou a própria lista de
+ * opções.
+ */
 export async function updateApplicationStatus(input: {
   applicationId: string;
   candidateId: string;
-  operationalStatus?: string;
-  selectiveStatus?: string;
+  status: (typeof candidateStatusEnum.enumValues)[number];
 }): Promise<ActionResult> {
   const staff = await requireStaff();
   if (!canWrite(staff)) return err("sem_permissao");
 
-  const updates: Record<string, string> = {};
-  if (input.operationalStatus) updates.operationalStatus = input.operationalStatus;
-  if (input.selectiveStatus) updates.selectiveStatus = input.selectiveStatus;
+  const [current] = await db
+    .select({ status: applications.status })
+    .from(applications)
+    .where(eq(applications.id, input.applicationId))
+    .limit(1);
 
-  if (Object.keys(updates).length === 0) return ok();
+  if (!current) return err("candidatura_invalida");
+  if (current.status === input.status) return ok();
 
   await db
     .update(applications)
-    .set({ ...updates, updatedAt: new Date() })
+    .set({ status: input.status, updatedAt: new Date() })
     .where(eq(applications.id, input.applicationId));
 
   await db.insert(auditEvents).values({
@@ -92,11 +103,10 @@ export async function updateApplicationStatus(input: {
     action: "status_updated",
     entityType: "application",
     entityId: input.applicationId,
-    metadata: updates,
+    metadata: { de: current.status, para: input.status },
   });
 
-  revalidatePath(`/candidatos/${input.candidateId}`);
-  revalidatePath("/ranking");
+  revalidateCandidateViews();
   return ok();
 }
 
@@ -128,41 +138,40 @@ export async function addApplicationTag(input: {
     tagId: tag.id,
   });
 
-  revalidatePath(`/candidatos/${input.candidateId}`);
+  revalidateCandidateViews();
   return ok();
 }
 
-export async function updateTalentClassification(input: {
+/**
+ * Estrela do candidato — o que sobrou do selo de talento.
+ *
+ * As cinco gradações antigas (`acompanhar`, `interessante`, `prioritario`,
+ * `forte_candidato`) nunca foram usadas: as 692 pessoas estavam todas em
+ * `nao_classificado`. Uma escala de cinco pontos que ninguém preenche é pior
+ * que um sinalizador binário que alguém usa.
+ */
+export async function toggleStarred(input: {
   candidateId: string;
-  classification:
-    | "nao_classificado"
-    | "acompanhar"
-    | "interessante"
-    | "prioritario"
-    | "forte_candidato";
-}): Promise<ActionResult> {
+  starred: boolean;
+}): Promise<ActionResult<{ starred: boolean }>> {
   const staff = await requireStaff();
   if (!canWrite(staff)) return err("sem_permissao");
 
   await db
     .update(candidates)
-    .set({
-      talentClassification: input.classification,
-      updatedAt: new Date(),
-    })
+    .set({ starred: input.starred, updatedAt: new Date() })
     .where(eq(candidates.id, input.candidateId));
 
   await db.insert(auditEvents).values({
     staffId: staff.id,
-    action: "classification_updated",
+    action: "starred_updated",
     entityType: "candidate",
     entityId: input.candidateId,
-    metadata: { classification: input.classification },
+    metadata: { para: input.starred },
   });
 
-  revalidatePath(`/candidatos/${input.candidateId}`);
-  revalidatePath("/ranking");
-  return ok();
+  revalidateCandidateViews();
+  return ok({ starred: input.starred });
 }
 
 /**
@@ -217,8 +226,6 @@ export async function updateQuickNote(input: {
     metadata: { de: before, para: value },
   });
 
-  revalidatePath(`/candidatos/${input.candidateId}`);
-  revalidatePath("/ranking");
-  revalidatePath("/(app)", "page");
+  revalidateCandidateViews();
   return ok({ note: value });
 }

@@ -2,11 +2,16 @@ import { notFound } from "next/navigation";
 import { CandidateProfile } from "@/components/candidate/profile";
 import { requireStaff } from "@/lib/auth/staff";
 import { buildProfileViewModel } from "@/lib/candidate/view-model";
-import { getCandidateProfile } from "@/lib/queries/candidate";
+import { getCandidateDetail } from "@/lib/queries/candidate-detail";
 import {
   getRankingNeighborIds,
   type RankingFilters,
 } from "@/lib/queries/ranking";
+import {
+  getDisciplinePositions,
+  getScoredApplications,
+} from "@/lib/queries/scored-applications";
+import { SORT_KEYS } from "@/lib/ranking-sort";
 
 export default async function CandidateProfilePage({
   params,
@@ -21,35 +26,49 @@ export default async function CandidateProfilePage({
   const str = (k: string) =>
     typeof query[k] === "string" ? (query[k] as string) : undefined;
 
-  const profile = await getCandidateProfile(id, staff.id);
-  if (!profile) notFound();
+  const detail = await getCandidateDetail(id, staff.id);
+  if (!detail) notFound();
 
+  const focusedId =
+    str("candidatura") ??
+    detail.defaultApplicationId ??
+    detail.applications[0]?.id;
+
+  const sort = str("sort");
   const rankingFilters: RankingFilters = {
     campaign: str("campaign"),
     discipline: str("discipline"),
     search: str("search"),
-    sort: str("sort") ?? "score",
-    order: str("order") ?? "desc",
+    sort: sort && SORT_KEYS.includes(sort) ? sort : "score",
+    order: str("order") === "asc" ? "asc" : "desc",
   };
 
   const rankingQuery = new URLSearchParams(
-    Object.entries(rankingFilters).filter(([, v]) => v !== undefined) as [
+    Object.entries(rankingFilters).filter(([, v]) => Boolean(v)) as [
       string,
       string,
     ][],
   ).toString();
 
-  const neighbors =
+  // Uma passada só pontua o banco inteiro; posição na disciplina e vizinhos no
+  // Painel saem dela sem nenhuma consulta a mais (`cache` do React deduplica).
+  const [{ byApplicationId }, positions, neighbors] = await Promise.all([
+    getScoredApplications(staff.id),
+    focusedId
+      ? getDisciplinePositions(focusedId, staff.id)
+      : Promise.resolve({ campaign: null, bank: null }),
     query.fromRanking === "1"
-      ? await getRankingNeighborIds(id, rankingFilters, staff.id)
-      : { prevId: null, nextId: null };
+      ? getRankingNeighborIds(id, rankingFilters, staff.id)
+      : Promise.resolve({ prevId: null, nextId: null }),
+  ]);
 
   // Toda derivação acontece no servidor: a página é útil antes de qualquer JS.
   const vm = buildProfileViewModel({
-    profile,
+    detail,
+    scored: focusedId ? byApplicationId.get(focusedId) : undefined,
+    positions,
     staff,
-    focusedApplicationId: str("candidatura"),
-    openSectionId: str("abrir"),
+    focusedApplicationId: focusedId,
   });
 
   return (

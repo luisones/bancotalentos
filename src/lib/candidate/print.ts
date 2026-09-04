@@ -1,14 +1,18 @@
-/** Seções que podem entrar no documento impresso. */
+/**
+ * Seções que podem entrar no documento impresso.
+ *
+ * Encolheu junto com a página. Saíram "Entrevista e aula-teste" (agendamentos
+ * deixaram de existir na interface), "Histórico de candidaturas", "Contatos" e
+ * "Registro de auditoria" — nenhum deles é mostrado em tela, e imprimir o que
+ * não se pode conferir na tela é como o papel deixa de bater com o sistema.
+ */
 export const PRINT_SECTIONS = [
-  { id: "avaliacao", label: "Avaliação e resultado", defaultOn: true },
-  { id: "materiais", label: "Currículo, vídeo e materiais", defaultOn: true },
-  { id: "respostas", label: "Respostas do processo", defaultOn: false },
-  { id: "etapas", label: "Entrevista e aula-teste", defaultOn: true },
-  { id: "praticas", label: "Práticas pedagógicas", defaultOn: false },
-  { id: "historico", label: "Histórico de candidaturas", defaultOn: true },
-  { id: "contatos", label: "Contatos", defaultOn: false },
-  { id: "observacoes", label: "Observações internas", defaultOn: false },
-  { id: "auditoria", label: "Registro de auditoria", defaultOn: false },
+  { id: "notas", label: "Notas e resultado", defaultOn: true },
+  { id: "materiais", label: "Currículo e vídeo", defaultOn: true },
+  { id: "respostas", label: "Respostas dissertativas", defaultOn: false },
+  { id: "praticas", label: "Práticas declaradas", defaultOn: false },
+  { id: "candidato", label: "Diferencial e observação do candidato", defaultOn: true },
+  { id: "observacoes", label: "Observações da equipe", defaultOn: false },
 ] as const;
 
 export type PrintSectionId = (typeof PRINT_SECTIONS)[number]["id"];

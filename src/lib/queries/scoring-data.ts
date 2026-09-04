@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, isNotNull, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import {
   dimensions,
@@ -10,23 +10,37 @@ import {
   weightConfigItems,
   weightConfigs,
 } from "@/lib/db/schema";
+import { getOverriddenDissertativeScores } from "./answer-overrides";
 import {
   assembleDimensionScores,
   average,
   canSeePeerEvaluations,
   type ConsolidatedResult,
+  type DimensionGroup,
 } from "@/lib/scoring";
 
 export { canSeePeerEvaluations };
 
+export type CatalogDimension = {
+  id: string;
+  code: (typeof dimensions.$inferSelect)["code"];
+  name: string;
+  sortOrder: number;
+  /** `didatica` | `conteudo` | null — a que grupo esta parte pertence. */
+  groupCode: string | null;
+  /** `AT` `DO` `DD` `CD` `CO` `VD` — a pastilha do perfil. */
+  shortCode: string | null;
+};
+
 export type ScoringCatalog = {
-  dimensions: Array<{
-    id: string;
-    code: (typeof dimensions.$inferSelect)["code"];
-    name: string;
-    sortOrder: number;
-  }>;
+  /** Só as dimensões ativas, na ordem de leitura. */
+  dimensions: CatalogDimension[];
+  /** Os grupos, derivados de `groupCode`, na ordem em que aparecem. */
+  groups: DimensionGroup[];
+  /** Pesos do que o Resultado pondera: grupos + dimensões sem grupo. */
   weights: Record<string, number>;
+  /** Pesos das partes DENTRO de cada grupo. */
+  memberWeights: Record<string, number>;
 };
 
 type LoadedEval = {
@@ -48,15 +62,22 @@ export type ScoreInputs = {
   evalsByApp: Map<string, LoadedEval[]>;
   importedByApp: Map<string, LoadedImported[]>;
   lessonScoreByApp: Map<string, number | null>;
+  /** Didática dissertativa recalculada, só para quem tem override. */
+  overriddenDissertativeByApp: Map<string, number>;
 };
 
-function scoringCatalogQuery() {
-  const latestConfig = db
+function latestWeightConfig() {
+  return db
     .select({ id: weightConfigs.id })
     .from(weightConfigs)
     .orderBy(desc(weightConfigs.validFrom))
     .limit(1)
     .as("latest_weight_config");
+}
+
+/** Dimensões ativas + o peso da parte dentro do grupo, quando configurado. */
+function scoringCatalogQuery() {
+  const latestConfig = latestWeightConfig();
 
   return db
     .select({
@@ -64,6 +85,8 @@ function scoringCatalogQuery() {
       code: dimensions.code,
       name: dimensions.name,
       sortOrder: dimensions.sortOrder,
+      groupCode: dimensions.groupCode,
+      shortCode: dimensions.shortCode,
       weight: weightConfigItems.weight,
     })
     .from(dimensions)
@@ -75,32 +98,94 @@ function scoringCatalogQuery() {
         eq(weightConfigItems.weightConfigId, latestConfig.id),
       ),
     )
+    .where(eq(dimensions.active, true))
     .orderBy(dimensions.sortOrder);
 }
 
+/**
+ * Pesos dos ITENS do Resultado — as linhas com `group_code`.
+ *
+ * `group_code` guarda o código do item ponderado, que é o grupo ("didatica",
+ * "conteudo") ou a própria dimensão quando ela não pertence a grupo nenhum
+ * ("aula_teste", "video"). As linhas com `dimension_id` são o outro nível: o
+ * peso da parte DENTRO de um grupo.
+ */
+function itemWeightsQuery() {
+  const latestConfig = latestWeightConfig();
+
+  return db
+    .select({
+      groupCode: weightConfigItems.groupCode,
+      weight: weightConfigItems.weight,
+    })
+    .from(weightConfigItems)
+    .innerJoin(latestConfig, eq(weightConfigItems.weightConfigId, latestConfig.id))
+    .where(isNotNull(weightConfigItems.groupCode));
+}
+
+type CatalogRows = Awaited<ReturnType<typeof scoringCatalogQuery>>;
+type ItemRows = Awaited<ReturnType<typeof itemWeightsQuery>>;
+
 function catalogFromRows(
-  rows: Awaited<ReturnType<typeof scoringCatalogQuery>>,
+  rows: CatalogRows,
+  itemRows: ItemRows,
 ): ScoringCatalog {
-  const hasWeights = rows.some((d) => d.weight !== null);
-  const equal = rows.length > 0 ? 1 / rows.length : 0;
-  const weights: Record<string, number> = {};
-  for (const dim of rows) {
-    weights[dim.code] = hasWeights ? Number(dim.weight ?? 0) : equal;
-  }
-  return {
-    dimensions: rows.map(({ id, code, name, sortOrder }) => ({
+  const dimensionList: CatalogDimension[] = rows.map(
+    ({ id, code, name, sortOrder, groupCode, shortCode }) => ({
       id,
       code,
       name,
       sortOrder,
-    })),
-    weights,
-  };
+      groupCode,
+      shortCode,
+    }),
+  );
+
+  // Grupos derivados das próprias dimensões, na ordem de `sort_order`. Não há
+  // catálogo de grupos separado para sair de sincronia com este.
+  const groups: DimensionGroup[] = [];
+  for (const dim of dimensionList) {
+    if (!dim.groupCode) continue;
+    const existing = groups.find((g) => g.code === dim.groupCode);
+    if (existing) existing.members.push(dim.code);
+    else groups.push({ code: dim.groupCode, members: [dim.code] });
+  }
+
+  // O peso da parte dentro do grupo. Sem configuração, 1 para todas — média
+  // simples, em vez de um grupo zerado.
+  const memberWeights: Record<string, number> = {};
+  for (const dim of rows) {
+    if (!dim.groupCode) continue;
+    memberWeights[dim.code] = dim.weight === null ? 1 : Number(dim.weight);
+  }
+
+  // O que o Resultado pondera: um item por grupo, mais as dimensões soltas.
+  const items = [
+    ...groups.map((g) => g.code),
+    ...dimensionList.filter((d) => !d.groupCode).map((d) => d.code),
+  ];
+  const configured = new Map(
+    itemRows
+      .filter((r) => r.groupCode !== null)
+      .map((r) => [r.groupCode as string, Number(r.weight)]),
+  );
+
+  const hasWeights = configured.size > 0;
+  const equal = items.length > 0 ? 1 / items.length : 0;
+  const weights: Record<string, number> = {};
+  for (const item of items) {
+    weights[item] = hasWeights ? (configured.get(item) ?? 0) : equal;
+  }
+
+  return { dimensions: dimensionList, groups, weights, memberWeights };
 }
 
 export async function getScoringCatalog(): Promise<ScoringCatalog> {
-  const rows = await scoringCatalogQuery();
-  return catalogFromRows(rows);
+  const [rows, itemRows] = await Promise.all([
+    scoringCatalogQuery(),
+    itemWeightsQuery(),
+  ]);
+  return catalogFromRows(rows, itemRows);
 }
 
 export async function getActiveWeights(): Promise<Record<string, number>> {
@@ -138,6 +223,7 @@ async function foldScoreInputs(
   evals: LoadedEval[],
   imported: LoadedImported[],
   lessonEvals: Array<{ id: string; applicationId: string }>,
+  overriddenDissertativeByApp: Map<string, number>,
 ): Promise<ScoreInputs> {
   const evalsByApp = new Map<string, LoadedEval[]>();
   const importedByApp = new Map<string, LoadedImported[]>();
@@ -189,7 +275,12 @@ async function foldScoreInputs(
     }
   }
 
-  return { evalsByApp, importedByApp, lessonScoreByApp };
+  return {
+    evalsByApp,
+    importedByApp,
+    lessonScoreByApp,
+    overriddenDissertativeByApp,
+  };
 }
 
 export async function getApplicationEvaluationsForApplications(
@@ -245,6 +336,7 @@ export async function prefetchScoringData(applicationIds?: string[]) {
         evalsByApp: new Map(),
         importedByApp: new Map(),
         lessonScoreByApp: new Map(),
+        overriddenDissertativeByApp: new Map(),
       },
     ] as const;
   }
@@ -259,43 +351,64 @@ export async function prefetchScoringData(applicationIds?: string[]) {
     ? inArray(lessonTestEvaluations.applicationId, applicationIds)
     : undefined;
 
-  const [catalogRows, evals, imported, lessonEvals] = await db.batch([
-    scoringCatalogQuery(),
-    db
-      .select({
-        applicationId: evaluations.applicationId,
-        dimensionCode: dimensions.code,
-        scoreRaw: evaluations.scoreRaw,
-        scaleMax: evaluations.scaleMax,
-        evaluatorStaffId: evaluations.evaluatorStaffId,
-        blindPeekedAt: evaluations.blindPeekedAt,
-      })
-      .from(evaluations)
-      .innerJoin(dimensions, eq(dimensions.id, evaluations.dimensionId))
-      .where(idFilter),
-    db
-      .select({
-        applicationId: importedDimensionScores.applicationId,
-        dimensionCode: dimensions.code,
-        score: importedDimensionScores.score,
-      })
-      .from(importedDimensionScores)
-      .innerJoin(
-        dimensions,
-        eq(dimensions.id, importedDimensionScores.dimensionId),
-      )
-      .where(importedFilter),
-    db
-      .select({
-        id: lessonTestEvaluations.id,
-        applicationId: lessonTestEvaluations.applicationId,
-      })
-      .from(lessonTestEvaluations)
-      .where(lessonFilter),
-  ]);
+  // O lote e os overrides não dependem um do outro. Em série somavam dois
+  // round-trips ao banco por render do Painel.
+  const [[catalogRows, itemRows, evals, imported, lessonEvals], overridden] =
+    await Promise.all([
+      db.batch([
+        scoringCatalogQuery(),
+        itemWeightsQuery(),
+        db
+          .select({
+            applicationId: evaluations.applicationId,
+            dimensionCode: dimensions.code,
+            scoreRaw: evaluations.scoreRaw,
+            scaleMax: evaluations.scaleMax,
+            evaluatorStaffId: evaluations.evaluatorStaffId,
+            blindPeekedAt: evaluations.blindPeekedAt,
+          })
+          .from(evaluations)
+          .innerJoin(dimensions, eq(dimensions.id, evaluations.dimensionId))
+          .where(idFilter),
+        db
+          .select({
+            applicationId: importedDimensionScores.applicationId,
+            dimensionCode: dimensions.code,
+            score: importedDimensionScores.score,
+          })
+          .from(importedDimensionScores)
+          .innerJoin(
+            dimensions,
+            eq(dimensions.id, importedDimensionScores.dimensionId),
+          )
+          .where(importedFilter),
+        db
+          .select({
+            id: lessonTestEvaluations.id,
+            applicationId: lessonTestEvaluations.applicationId,
+          })
+          .from(lessonTestEvaluations)
+          .where(lessonFilter),
+      ]),
+      // Só quem tem override entra nesta consulta; para o resto ela devolve
+      // vazio e o valor importado segue valendo.
+      getOverriddenDissertativeScores(applicationIds),
+    ]);
 
-  const inputs = await foldScoreInputs(evals, imported, lessonEvals);
-  return [catalogFromRows(catalogRows), inputs] as const;
+  const inputs = await foldScoreInputs(evals, imported, lessonEvals, overridden);
+  return [catalogFromRows(catalogRows, itemRows), inputs] as const;
+}
+
+/**
+ * Hoje só a didática dissertativa tem override por pergunta; o formato de mapa
+ * por código já deixa o caminho pronto para a próxima dimensão que tiver.
+ */
+function overriddenFor(
+  inputs: ScoreInputs,
+  applicationId: string,
+): Record<string, number> | undefined {
+  const value = inputs.overriddenDissertativeByApp.get(applicationId);
+  return value === undefined ? undefined : { didatica_dissertativa: value };
 }
 
 export function assembleScoresForApplications(
@@ -316,9 +429,12 @@ export function assembleScoresForApplications(
       id,
       assembleDimensionScores({
         dimensionCodes,
+        groups: catalog.groups,
+        memberWeights: catalog.memberWeights,
         weights: catalog.weights,
         evals: inputs.evalsByApp.get(id) ?? [],
         imported: inputs.importedByApp.get(id) ?? [],
+        overridden: overriddenFor(inputs, id),
         lessonTestScore: inputs.lessonScoreByApp.get(id) ?? null,
         staffUserId: options?.staffUserId,
         forceReveal: options?.forceReveal,

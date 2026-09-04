@@ -1,154 +1,115 @@
-import { Chip } from "@/components/liceu/chip";
-import { FieldGrid } from "@/components/liceu/field-block";
-import { MicroHeader, Panel } from "@/components/liceu/surface";
+import { Panel } from "@/components/liceu/surface";
 import { initialsOf } from "@/lib/format";
+import type { ProfileViewModel } from "@/lib/types/candidate-profile";
 import { cn } from "@/lib/utils";
-import { toneFg, type Tone } from "@/lib/tone";
+import { InstrumentBadges } from "./instrument-badges";
+import { QuickNoteEditor } from "./quick-note-editor";
+import { StatusControl } from "./status-control";
+import { WhatsAppIcon } from "@/components/liceu/icons";
 
 /**
- * Card de identidade.
+ * Quem é, para o quê concorre, onde está e como se compara.
  *
- * Denso de propósito: nome, nota rápida, chips, blocos rótulo→valor e a pilha
- * de ações cabem acima da dobra. Nunca ganha imagem de herói, gradiente ou
- * fundo decorativo — isso viraria "marketing styling on operational UI".
+ * Denso de propósito: nome, disciplina, status, posição, contato, instrumentos
+ * aplicados, nota rápida, inglês e distância cabem acima da dobra. Os três
+ * blocos de status antigos — situação seletiva, etapa operacional, selo de
+ * talento — viraram uma tag só com estrela.
  */
-export function IdentityCard({
-  eyebrow,
-  name,
-  quickNote,
-  quickNoteAuthorship,
-  chips,
-  selective,
-  operational,
-  classification,
-  contact,
-  actions,
-  footnote,
-}: {
-  eyebrow: string;
-  name: string;
-  quickNote: string | null;
-  quickNoteAuthorship?: string | null;
-  chips: string[];
-  selective: { label: string; tone: Tone; action?: React.ReactNode };
-  operational: { label: string; action?: React.ReactNode };
-  classification: { label: string; action?: React.ReactNode };
-  contact: React.ReactNode;
-  actions: React.ReactNode;
-  footnote?: string;
-}) {
+export function IdentityCard({ vm }: { vm: ProfileViewModel }) {
+  const { identity: id, focused, viewer } = vm;
+
   return (
     <Panel>
-      <div className="flex flex-wrap items-start gap-6">
+      <div className="flex flex-wrap items-start gap-5">
         <div
           aria-hidden
-          className="font-heading grid h-32 w-26 shrink-0 place-items-center rounded-chip bg-navy text-initials font-bold tracking-[-0.02em] text-gold"
+          className="font-heading grid size-16 shrink-0 place-items-center rounded-chip bg-navy text-title font-bold tracking-[-0.02em] text-gold"
         >
-          {initialsOf(name)}
+          {initialsOf(id.name)}
         </div>
 
-        <div className="min-w-0 flex-1 basis-80">
-          <p className="font-heading text-eyebrow font-bold uppercase tracking-eyebrow text-gold-text">
-            {eyebrow}
-          </p>
-          <h1 className="font-heading text-h1 my-1.5 font-bold tracking-[-0.02em] text-navy [overflow-wrap:anywhere]">
-            {name}
-          </h1>
-
-          {/* Só EXIBIÇÃO. Toda escrita acontece no diálogo único do topo,
-              para não haver dois caminhos que parecem fazer o mesmo. */}
-          {quickNote && (
-            <div className="mb-3 flex flex-wrap items-baseline gap-x-3 gap-y-0.5">
-              <p className="text-dense border-l-2 border-l-gold-text pl-2.5 text-ink-3">
-                {quickNote}
-              </p>
-              {quickNoteAuthorship && (
-                <span className="text-meta text-subtle">
-                  {quickNoteAuthorship}
-                </span>
-              )}
-            </div>
-          )}
-
-          {chips.length > 0 && (
-            <div className="flex flex-wrap gap-2">
-              {chips.map((c) => (
-                <Chip key={c}>{c}</Chip>
-              ))}
-            </div>
-          )}
-
-          <FieldGrid className="mt-5">
-            {/* Três gramáticas visuais mutuamente exclusivas. A mistura numa
-                fileira única de badges é o que hoje ensina ao usuário que
-                situação seletiva, etapa e selo são a mesma coisa. */}
-            <div>
-              <MicroHeader>Situação seletiva</MicroHeader>
-              <span
-                className={cn(
-                  "text-cell inline-block rounded-chip px-2.5 py-1 font-semibold text-white",
-                  {
-                    navy: "bg-navy",
-                    gold: "bg-gold-text",
-                    alert: "bg-alert",
-                    positive: "bg-positive",
-                    neutral: "bg-neutral-fg",
-                  }[selective.tone],
-                )}
-              >
-                {selective.label}
-              </span>
-              <p className="text-meta mt-1.5 text-subtle">
-                o que a escola decidiu
-              </p>
-              {selective.action}
-            </div>
-
-            <div>
-              <MicroHeader>Etapa operacional</MicroHeader>
-              {/* Nunca semântica: no instante em que "entrevista agendada"
-                  fica verde, o usuário lê progresso como aprovação. */}
-              <span className="text-cell inline-flex items-center gap-2 rounded-chip border border-btn-border px-2.5 py-1 font-semibold text-navy">
-                <span
-                  aria-hidden
-                  className="size-2 rounded-full border border-navy"
-                />
-                {operational.label}
-              </span>
-              <p className="text-meta mt-1.5 text-subtle">
-                onde ele está agora
-              </p>
-              {operational.action}
-            </div>
-
-            <div>
-              <MicroHeader>Selo de talento</MicroHeader>
-              {/* Sem caixa, para não parecer status. */}
-              <span className="text-cell inline-flex items-center gap-1.5 font-semibold text-gold-text">
-                <span aria-hidden>★</span>
-                {classification.label}
-              </span>
-              <p className="text-meta mt-1.5 text-subtle">
-                julgamento da equipe, independente da nota
-              </p>
-              {classification.action}
-            </div>
-
-            <div>
-              <MicroHeader>Contato</MicroHeader>
-              {contact}
-            </div>
-          </FieldGrid>
-        </div>
-
-        <div className="flex w-full max-w-[240px] shrink-0 flex-col gap-2 max-md:max-w-none">
-          <div className="grid gap-2 md:grid-cols-1 max-md:grid-cols-2">
-            {actions}
+        <div className="min-w-0 flex-1 basis-96">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+            <h1 className="font-heading text-h1 font-bold tracking-[-0.02em] text-navy [overflow-wrap:anywhere]">
+              {id.name}
+            </h1>
+            {focused && (
+              <StatusControl
+                candidateId={vm.candidateId}
+                applicationId={focused.applicationId}
+                applicationLabel={focused.label}
+                status={id.status}
+                starred={id.starred}
+                canWrite={viewer.canWrite}
+              />
+            )}
           </div>
-          {footnote && (
-            <p className="text-meta mt-0.5 leading-snug text-subtle">
-              {footnote}
-            </p>
+
+          <p className="text-dense mt-1 flex flex-wrap items-baseline gap-x-2 text-ink-3">
+            <span className="font-semibold text-navy">
+              {id.disciplineName ?? "Sem disciplina"}
+            </span>
+            {id.campaignName && (
+              <span className="text-subtle">· {id.campaignName}</span>
+            )}
+            {id.positions.map((position) => (
+              <span key={position.scope} className="text-gold-text">
+                · {position.label}{" "}
+                <span className="text-subtle">{position.scope}</span>
+              </span>
+            ))}
+          </p>
+
+          <div className="mt-3">
+            <QuickNoteEditor
+              candidateId={vm.candidateId}
+              note={id.quickNote}
+              canWrite={viewer.canWrite}
+            />
+          </div>
+
+          <div className="mt-3.5 flex flex-wrap items-center gap-x-5 gap-y-2">
+            <InstrumentBadges items={vm.instruments} />
+            <Fact label="Inglês" value={id.englishLevel} />
+            <Fact
+              label="Santo André"
+              value={id.distances.santoAndre}
+              title={id.distances.note}
+            />
+            <Fact
+              label="São Caetano"
+              value={id.distances.saoCaetano}
+              title={id.distances.note}
+            />
+          </div>
+        </div>
+
+        <div className="flex shrink-0 flex-wrap items-center gap-2">
+          {id.whatsappUrl ? (
+            <a
+              href={id.whatsappUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              title={`WhatsApp · ${id.phone}`}
+              className="grid size-9 place-items-center rounded-chip border border-positive-border bg-positive-bg text-positive hover:bg-positive hover:text-white"
+            >
+              <WhatsAppIcon className="size-4" />
+              <span className="sr-only">Abrir conversa no WhatsApp</span>
+            </a>
+          ) : (
+            <span className="text-meta text-subtle">Sem telefone</span>
+          )}
+
+          {id.email ? (
+            <a
+              href={`mailto:${id.email}`}
+              title={id.email}
+              className="text-cell rounded-chip border border-btn-border px-3 py-1.5 font-semibold text-navy hover:border-navy hover:bg-info-bg"
+            >
+              E-mail
+            </a>
+          ) : (
+            <span className="text-meta text-subtle">Sem e-mail</span>
           )}
         </div>
       </div>
@@ -156,22 +117,32 @@ export function IdentityCard({
   );
 }
 
-/** Link de ação inline, no bloco a que a informação pertence. */
-export function InlineAction({
-  children,
-  onClickHref,
+/** Rótulo pequeno + valor, para o que é contexto e não decisão. */
+function Fact({
+  label,
+  value,
+  title,
 }: {
-  children: React.ReactNode;
-  onClickHref: string;
+  label: string;
+  value: string | null;
+  title?: string | null;
 }) {
   return (
-    <a
-      href={onClickHref}
-      className="text-tag mt-1 inline-block font-semibold text-gold-text hover:underline"
+    <span
+      className="flex items-baseline gap-1.5"
+      title={value ? (title ?? undefined) : undefined}
     >
-      {children} →
-    </a>
+      <span className="text-micro uppercase tracking-micro text-label">
+        {label}
+      </span>
+      <span
+        className={cn(
+          "text-cell font-semibold",
+          value ? "text-ink" : "text-faint",
+        )}
+      >
+        {value ?? "—"}
+      </span>
+    </span>
   );
 }
-
-export { toneFg };

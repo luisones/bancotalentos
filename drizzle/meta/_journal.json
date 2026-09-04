@@ -36,6 +36,41 @@
       "when": 1788332642281,
       "tag": "0004_blind_peeks",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1788480000000,
+      "tag": "0005_dimension_split_enum",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1788480100000,
+      "tag": "0006_dimension_split_data",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1788480200000,
+      "tag": "0007_cep_e_distancias",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1788480300000,
+      "tag": "0008_status_unificado",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1788480400000,
+      "tag": "0009_pesos_por_grupo_e_override",
+      "breakpoints": true
     }
   ]
 }

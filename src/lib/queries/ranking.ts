@@ -1,16 +1,19 @@
-import { and, asc, desc, eq, ilike, or } from "drizzle-orm";
+import { asc } from "drizzle-orm";
 import { db } from "@/lib/db";
-import {
-  applications,
-  campaigns,
-  candidates,
-  disciplines,
-} from "@/lib/db/schema";
+import { campaigns, disciplines } from "@/lib/db/schema";
 import { formatCoverage } from "@/lib/scoring";
+import { normalizeSearch, SORTERS, sortRows } from "@/lib/ranking-sort";
 import {
-  assembleScoresForApplications,
-  prefetchScoringData,
-} from "./scoring-data";
+  getScoredApplications,
+  type ScoredApplication,
+} from "./scored-applications";
+
+export {
+  englishRank,
+  SORT_KEYS,
+  SORTERS,
+  STATUS_ORDER,
+} from "@/lib/ranking-sort";
 
 export type RankingFilters = {
   campaign?: string;
@@ -20,121 +23,48 @@ export type RankingFilters = {
   order?: string;
 };
 
-export type RankingRow = {
-  applicationId: string;
-  candidateId: string;
-  candidateName: string;
-  email: string | null;
-  disciplineName: string | null;
-  campaignName: string | null;
-  selectiveStatus: string;
-  operationalStatus: string;
-  talentClassification: string;
-  /** Nota rápida: contexto em 200ms varrendo a lista. */
-  quickNote: string | null;
-  consolidated: number | null;
-  coverage: string;
-  coverageCount: number;
-  totalDimensions: number;
-  appliedAt: Date | null;
+export type RankingRow = ScoredApplication & {
+  /** "3/4" — o consolidado nunca aparece sem ela. */
+  coverageLabel: string;
 };
 
 export async function getRankingRows(
   filters: RankingFilters,
   staffUserId: string,
 ): Promise<RankingRow[]> {
-  const conditions = [];
+  const { rows } = await getScoredApplications(staffUserId);
 
-  if (filters.campaign) {
-    conditions.push(eq(campaigns.slug, filters.campaign));
-  }
-  if (filters.discipline) {
-    conditions.push(eq(disciplines.slug, filters.discipline));
-  }
-  if (filters.search) {
-    const term = `%${filters.search}%`;
-    conditions.push(
-      or(
-        ilike(candidates.fullName, term),
-        ilike(candidates.email, term),
-        ilike(disciplines.name, term),
-      )!,
-    );
-  }
-
-  const prefetchAll =
-    conditions.length === 0 ? prefetchScoringData() : null;
-
-  const rows = await db
-    .select({
-      applicationId: applications.id,
-      candidateId: candidates.id,
-      candidateName: candidates.fullName,
-      email: candidates.email,
-      disciplineName: disciplines.name,
-      campaignName: campaigns.name,
-      selectiveStatus: applications.selectiveStatus,
-      operationalStatus: applications.operationalStatus,
-      talentClassification: candidates.talentClassification,
-      quickNote: candidates.highlightedNote,
-      appliedAt: applications.appliedAt,
-    })
-    .from(applications)
-    .innerJoin(candidates, eq(candidates.id, applications.candidateId))
-    .leftJoin(disciplines, eq(disciplines.id, applications.disciplineId))
-    .leftJoin(campaigns, eq(campaigns.id, applications.campaignId))
-    .where(conditions.length > 0 ? and(...conditions) : undefined)
-    .orderBy(desc(applications.appliedAt));
-
-  const applicationIds = rows.map((row) => row.applicationId);
-  const [catalog, inputs] = prefetchAll
-    ? await prefetchAll
-    : await prefetchScoringData(applicationIds);
-  const scoresByApp = assembleScoresForApplications(
-    applicationIds,
-    catalog,
-    inputs,
-    { staffUserId },
-  );
-
-  const withScores: RankingRow[] = rows.map((row) => {
-    const result = scoresByApp.get(row.applicationId);
-    return {
-      ...row,
-      consolidated: result?.consolidated ?? null,
-      coverage: result
-        ? formatCoverage(result.coverage, result.totalDimensions)
-        : "0/0",
-      coverageCount: result?.coverage ?? 0,
-      totalDimensions: result?.totalDimensions ?? 0,
-    };
-  });
-
-  const sort = filters.sort ?? "score";
-  const order = filters.order ?? "desc";
-
-  withScores.sort((a, b) => {
-    let cmp = 0;
-    if (sort === "name") {
-      cmp = a.candidateName.localeCompare(b.candidateName, "pt-BR");
-    } else if (sort === "date") {
-      const da = a.appliedAt?.getTime() ?? 0;
-      const db = b.appliedAt?.getTime() ?? 0;
-      cmp = da - db;
-    } else {
-      const sa = a.consolidated ?? -1;
-      const sb = b.consolidated ?? -1;
-      cmp = sa - sb;
+  const term = filters.search ? normalizeSearch(filters.search) : null;
+  const filtered = rows.filter((row) => {
+    if (filters.campaign && row.campaignSlug !== filters.campaign) return false;
+    if (filters.discipline && row.disciplineSlug !== filters.discipline) {
+      return false;
     }
-    return order === "asc" ? cmp : -cmp;
+    if (!term) return true;
+    // Busca sem acento: "matematica" tem que achar "Matemática".
+    const haystack = normalizeSearch(
+      [row.candidateName, row.email ?? "", row.disciplineName ?? ""].join(" "),
+    );
+    return haystack.includes(term);
   });
 
-  return withScores;
+  const withCoverage: RankingRow[] = filtered.map((row) => ({
+    ...row,
+    coverageLabel: formatCoverage(row.coverage, row.totalDimensions),
+  }));
+
+  const column = SORTERS[filters.sort ?? "score"] ?? SORTERS.score;
+  const descending = (filters.order ?? "desc") !== "asc";
+
+  return sortRows(withCoverage, column, descending);
 }
 
 export async function getRankingFiltersData() {
   const [allCampaigns, allDisciplines] = await Promise.all([
-    db.select({ slug: campaigns.slug, name: campaigns.name }).from(campaigns),
+    db
+      .select({ slug: campaigns.slug, name: campaigns.name })
+      .from(campaigns)
+      .orderBy(asc(campaigns.name)),
     db
       .select({ slug: disciplines.slug, name: disciplines.name })
       .from(disciplines)

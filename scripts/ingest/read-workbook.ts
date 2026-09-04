@@ -81,6 +81,64 @@ print(json.dumps(result))
   return JSON.parse(result.stdout) as WorkbookData;
 }
 
+/**
+ * Lê UMA aba arbitrária, por nome. `readWorkbook` só conhece as abas dos
+ * workbooks normalizados; os backfills precisam voltar às planilhas originais,
+ * onde os nomes de aba são outros (`PROFESSORES`, por exemplo).
+ */
+export function readSheet(filePath: string, sheetName: string): SheetRow[] {
+  const absPath = path.resolve(filePath);
+  const python = `
+import json, openpyxl, sys
+from datetime import date, datetime
+
+def serialize(v):
+    if v is None:
+        return None
+    if isinstance(v, float) and v != v:
+        return None
+    if isinstance(v, bool):
+        return "SIM" if v else "NAO"
+    if isinstance(v, (datetime, date)):
+        return v.isoformat()
+    return v
+
+path, sheet = sys.argv[1], sys.argv[2]
+wb = openpyxl.load_workbook(path, read_only=True, data_only=True)
+if sheet not in wb.sheetnames:
+    print(json.dumps([]))
+    sys.exit(0)
+ws = wb[sheet]
+rows_iter = ws.iter_rows(values_only=True)
+headers = [str(h).strip() if h is not None else "" for h in next(rows_iter)]
+rows = []
+for row in rows_iter:
+    cells = [serialize(c) for c in row]
+    if all(c is None or c == "" for c in cells):
+        continue
+    obj = {}
+    for i, key in enumerate(headers):
+        if not key:
+            continue
+        obj[key] = cells[i] if i < len(cells) else None
+    rows.append(obj)
+
+print(json.dumps(rows))
+`;
+
+  const result = spawnSync("python3", ["-c", python, absPath, sheetName], {
+    encoding: "utf-8",
+    maxBuffer: 100 * 1024 * 1024,
+  });
+
+  if (result.error) throw result.error;
+  if (result.status !== 0) {
+    throw new Error(result.stderr || `python exited with ${result.status}`);
+  }
+
+  return JSON.parse(result.stdout) as SheetRow[];
+}
+
 export function cellText(row: SheetRow, key: string): string | null {
   const value = row[key];
   if (value === null || value === undefined) return null;

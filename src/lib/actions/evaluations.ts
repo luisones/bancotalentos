@@ -8,6 +8,7 @@ import {
   blindPeeks,
   evaluationRevisions,
   evaluations,
+  subjectiveAnswers,
 } from "@/lib/db/schema";
 import { err, ok, type ActionResult } from "./result";
 import { revalidateCandidateViews } from "./revalidate";
@@ -109,6 +110,73 @@ export async function saveEvaluation(
 
   revalidateCandidateViews();
   return ok({ evaluationId, score: input.score, revisionCreated });
+}
+
+/**
+ * Substitui a nota do ensemble de LLM numa pergunta dissertativa.
+ *
+ * A UI trabalha em porcentagem (0–100), que é como o avaliador lê "quão boa foi
+ * esta resposta". O banco guarda na escala dos provedores (0–30), a mesma de
+ * `llm_evaluations` — assim o override e o que ele substitui são diretamente
+ * comparáveis, e `computeAprDisF` continua recebendo a entrada que espera.
+ *
+ * `percent = null` remove o override e devolve a pergunta ao ensemble.
+ */
+export async function overrideAnswerScore(input: {
+  answerId: string;
+  candidateId: string;
+  /** 0 a 100, ou `null` para voltar à nota do ensemble. */
+  percent: number | null;
+}): Promise<ActionResult<{ percent: number | null }>> {
+  const staff = await requireStaff(["admin", "avaliador"]);
+  if (!canWrite(staff)) return err("sem_permissao");
+
+  if (input.percent !== null) {
+    if (!Number.isFinite(input.percent)) return err("nota_invalida", "percent");
+    if (input.percent < 0 || input.percent > 100) {
+      return err("nota_fora_da_faixa", "percent");
+    }
+  }
+
+  const [current] = await db
+    .select({
+      id: subjectiveAnswers.id,
+      overrideScore: subjectiveAnswers.overrideScore,
+    })
+    .from(subjectiveAnswers)
+    .where(eq(subjectiveAnswers.id, input.answerId))
+    .limit(1);
+
+  if (!current) return err("candidatura_invalida");
+
+  const raw =
+    input.percent === null ? null : ((input.percent / 100) * 30).toFixed(3);
+
+  await db
+    .update(subjectiveAnswers)
+    .set({
+      overrideScore: raw,
+      overrideByStaffId: input.percent === null ? null : staff.id,
+      overrideAt: input.percent === null ? null : new Date(),
+    })
+    .where(eq(subjectiveAnswers.id, input.answerId));
+
+  const toPercent = (value: string | null) =>
+    value === null ? null : (Number(value) / 30) * 100;
+
+  await db.insert(auditEvents).values({
+    staffId: staff.id,
+    action: "answer_override",
+    entityType: "subjective_answer",
+    entityId: input.answerId,
+    metadata: {
+      de: toPercent(current.overrideScore),
+      para: input.percent,
+    },
+  });
+
+  revalidateCandidateViews();
+  return ok({ percent: input.percent });
 }
 
 export async function peekBlindEvaluation(

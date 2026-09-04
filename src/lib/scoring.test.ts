@@ -7,8 +7,26 @@ import {
   computeConsolidated,
   computeFinalCont,
   computeQnF,
+  foldGroups,
+  groupScore,
   normalizeScore,
 } from "./scoring";
+
+const CONTEUDO = {
+  code: "conteudo",
+  members: ["conteudo_objetiva", "conteudo_dissertativa"],
+};
+const DIDATICA = {
+  code: "didatica",
+  members: ["didatica_objetiva", "didatica_dissertativa"],
+};
+/** O 1/2 herdado da planilha de 2025. */
+const MEMBER_WEIGHTS = {
+  conteudo_objetiva: 1,
+  conteudo_dissertativa: 2,
+  didatica_objetiva: 1,
+  didatica_dissertativa: 1,
+};
 
 describe("scoring", () => {
   it("normalizes 0-30 to 0-10", () => {
@@ -115,6 +133,121 @@ describe("scoring", () => {
     expect(result.dimensionScores.find((d) => d.code === "aula_teste")?.score).toBe(
       8,
     );
+  });
+
+  it("group score with 1/2 weights reproduces FINAL CONT exactly", () => {
+    // A fórmula da planilha de 2025 vira configuração, não constante. Se este
+    // teste quebrar, a nota histórica de 68 candidaturas mudou de significado.
+    for (const [obj, disc] of [
+      [9, 5.5],
+      [6.5, 1.7],
+      [7, 8.25],
+      [8.5, 1.9],
+    ]) {
+      expect(
+        groupScore(
+          [
+            { code: "conteudo_objetiva", score: obj },
+            { code: "conteudo_dissertativa", score: disc },
+          ],
+          MEMBER_WEIGHTS,
+        ),
+      ).toBeCloseTo(computeFinalCont(obj, disc), 10);
+    }
+  });
+
+  it("group score with a single part is that part, never an average with zero", () => {
+    expect(
+      groupScore(
+        [
+          { code: "conteudo_objetiva", score: 8 },
+          { code: "conteudo_dissertativa", score: null },
+        ],
+        MEMBER_WEIGHTS,
+      ),
+    ).toBe(8);
+    // Mesmo sendo a parte de peso 2 a que sobrou: renormalizar sobre o que
+    // existe significa que o peso da ausente sai do denominador.
+    expect(
+      groupScore(
+        [
+          { code: "conteudo_objetiva", score: null },
+          { code: "conteudo_dissertativa", score: 6 },
+        ],
+        MEMBER_WEIGHTS,
+      ),
+    ).toBe(6);
+  });
+
+  it("group score with no parts is null", () => {
+    expect(
+      groupScore(
+        [
+          { code: "conteudo_objetiva", score: null },
+          { code: "conteudo_dissertativa", score: null },
+        ],
+        MEMBER_WEIGHTS,
+      ),
+    ).toBeNull();
+    expect(groupScore([], MEMBER_WEIGHTS)).toBeNull();
+  });
+
+  it("folds groups and keeps ungrouped dimensions loose", () => {
+    const { items, groupScores } = foldGroups(
+      [
+        { code: "conteudo_objetiva", score: 9 },
+        { code: "conteudo_dissertativa", score: 5.5 },
+        { code: "didatica_objetiva", score: 7 },
+        { code: "didatica_dissertativa", score: null },
+        { code: "aula_teste", score: 8 },
+        { code: "video", score: null },
+      ],
+      [CONTEUDO, DIDATICA],
+      MEMBER_WEIGHTS,
+    );
+
+    expect(items.map((i) => i.code)).toEqual([
+      "conteudo",
+      "didatica",
+      "aula_teste",
+      "video",
+    ]);
+    expect(groupScores.find((g) => g.code === "conteudo")?.score).toBeCloseTo(
+      6.6667,
+      3,
+    );
+    expect(groupScores.find((g) => g.code === "didatica")?.score).toBe(7);
+  });
+
+  it("consolidates over groups, so didática does not weigh double", () => {
+    const result = assembleDimensionScores({
+      dimensionCodes: [
+        "conteudo_objetiva",
+        "conteudo_dissertativa",
+        "didatica_objetiva",
+        "didatica_dissertativa",
+        "aula_teste",
+        "video",
+      ],
+      groups: [CONTEUDO, DIDATICA],
+      memberWeights: MEMBER_WEIGHTS,
+      weights: { conteudo: 0.3, didatica: 0.3, aula_teste: 0.3, video: 0.1 },
+      evals: [],
+      imported: [
+        { dimensionCode: "conteudo_objetiva", score: 9 },
+        { dimensionCode: "conteudo_dissertativa", score: 5.5 },
+        { dimensionCode: "didatica_objetiva", score: 7 },
+      ],
+      lessonTestScore: null,
+    });
+
+    // Conteúdo = (9 + 2*5.5)/3 = 6.6667 · Didática = 7 (só a objetiva).
+    // Renormalizado sobre 0.3 + 0.3, porque aula-teste e vídeo não existem.
+    expect(result.consolidated).toBeCloseTo((6.66667 * 0.3 + 7 * 0.3) / 0.6, 4);
+    expect(result.coverage).toBe(2);
+    expect(result.totalDimensions).toBe(4);
+    // As folhas continuam disponíveis para o detalhe da página do professor.
+    expect(result.dimensionScores).toHaveLength(6);
   });
 
   it("hides peer evaluations until the staff member has scored", () => {
