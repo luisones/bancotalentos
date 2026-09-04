@@ -21,9 +21,12 @@ npm run dev
 
 ## Neon
 
-- Projeto: `bancotalentos` (`super-frost-69304525`)
+- Projeto: `bancotalentos-sa` (`fancy-snow-03616478`)
+- Região: `aws-sa-east-1` (São Paulo)
 - Org: `org-proud-cloud-20519926`
-- Branch: `br-nameless-dream-awpm9ea0`
+- Branch: `main` (`br-frosty-band-acu6sfjl`)
+- Vercel Functions: `gru1` (São Paulo) via [`vercel.json`](vercel.json)
+- Legado (rollback, não apagar sem OK): `bancotalentos-us-east-1-legacy` (`super-frost-69304525`)
 
 ## Documentação
 
