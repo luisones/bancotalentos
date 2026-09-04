@@ -1,17 +1,11 @@
 import { cache } from "react";
-import { asc, eq } from "drizzle-orm";
-import { db } from "@/lib/db";
 import {
-  applications,
-  campaigns,
-  candidates,
-  cepDistances,
-  cepLocations,
-  disciplines,
-} from "@/lib/db/schema";
+  getCachedApplicationBase,
+  getCachedScoringPayload,
+} from "./cached-data";
 import {
   assembleScoresForApplications,
-  prefetchScoringData,
+  foldScoreInputsFromPayload,
   type ScoringCatalog,
 } from "./scoring-data";
 
@@ -61,56 +55,20 @@ export type ScoredIndex = {
 /**
  * Pontua TODAS as candidaturas uma vez por request.
  *
- * Antes, `getRankingRows` varria e pontuava o banco inteiro, e
- * `getRankingNeighborIds` repetia a varredura completa só para descobrir o
- * vizinho anterior e o próximo. Com as posições por disciplina (na campanha e
- * no banco) isso viraria quatro varreduras na mesma renderização.
+ * Lista e insumos de nota vêm do Data Cache (tags `application-list` /
+ * `scoring-data`). O consolidado cego depende do avaliador e monta em memória.
  *
- * `cache` do React deduplica dentro de um request; a chave é o avaliador,
- * porque a avaliação cega esconde nota de colega e portanto muda o
- * consolidado de quem está olhando.
+ * `cache` do React deduplica dentro de um request (Painel + perfil + vizinhos).
  */
 export const getScoredApplications = cache(
   async (staffUserId: string): Promise<ScoredIndex> => {
-    // As duas metades não dependem uma da outra: a pontuação é de TODAS as
-    // candidaturas, não das que esta consulta devolve. Em série custavam a soma
-    // de dois round-trips ao banco.
-    const [base, [catalog, inputs]] = await Promise.all([
-      db
-        .select({
-          applicationId: applications.id,
-          candidateId: candidates.id,
-          candidateName: candidates.fullName,
-          email: candidates.email,
-          phone: candidates.phone,
-          englishLevel: candidates.englishLevel,
-          quickNote: candidates.highlightedNote,
-          starred: candidates.starred,
-          status: applications.status,
-          disciplineId: applications.disciplineId,
-          disciplineName: disciplines.name,
-          disciplineSlug: disciplines.slug,
-          campaignId: applications.campaignId,
-          campaignName: campaigns.name,
-          campaignSlug: campaigns.slug,
-          appliedAt: applications.appliedAt,
-          postalCode: candidates.postalCode,
-          kmSantoAndre: cepDistances.kmSantoAndre,
-          kmSaoCaetano: cepDistances.kmSaoCaetano,
-          distanceMode: cepDistances.mode,
-          distancePrecision: cepLocations.precision,
-        })
-        .from(applications)
-        .innerJoin(candidates, eq(candidates.id, applications.candidateId))
-        .leftJoin(disciplines, eq(disciplines.id, applications.disciplineId))
-        .leftJoin(campaigns, eq(campaigns.id, applications.campaignId))
-        // A distância é sempre lida do cache. Nenhuma chamada externa aqui.
-        .leftJoin(cepDistances, eq(cepDistances.cep, candidates.postalCode))
-        .leftJoin(cepLocations, eq(cepLocations.cep, candidates.postalCode))
-        .orderBy(asc(candidates.fullName)),
-      prefetchScoringData(),
+    const [base, payload] = await Promise.all([
+      getCachedApplicationBase(),
+      getCachedScoringPayload(),
     ]);
 
+    const catalog = payload.catalog;
+    const inputs = foldScoreInputsFromPayload(payload);
     const ids = base.map((r) => r.applicationId);
     const scoresByApp = assembleScoresForApplications(ids, catalog, inputs, {
       staffUserId,
@@ -123,9 +81,27 @@ export const getScoredApplications = cache(
       for (const grp of result?.groupScores ?? []) scores[grp.code] = grp.score;
 
       return {
-        ...row,
+        applicationId: row.applicationId,
+        candidateId: row.candidateId,
+        candidateName: row.candidateName,
+        email: row.email,
+        phone: row.phone,
+        englishLevel: row.englishLevel,
+        quickNote: row.quickNote,
+        starred: row.starred,
+        status: row.status,
+        disciplineId: row.disciplineId,
+        disciplineName: row.disciplineName,
+        disciplineSlug: row.disciplineSlug,
+        campaignId: row.campaignId,
+        campaignName: row.campaignName,
+        campaignSlug: row.campaignSlug,
+        appliedAt: row.appliedAt ? new Date(row.appliedAt) : null,
+        postalCode: row.postalCode,
         kmSantoAndre: numberOrNull(row.kmSantoAndre),
         kmSaoCaetano: numberOrNull(row.kmSaoCaetano),
+        distanceMode: row.distanceMode,
+        distancePrecision: row.distancePrecision,
         consolidated: result?.consolidated ?? null,
         coverage: result?.coverage ?? 0,
         totalDimensions: result?.totalDimensions ?? 0,

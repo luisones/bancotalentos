@@ -5,7 +5,10 @@ import { canWrite, requireStaff } from "@/lib/auth/staff";
 import { db } from "@/lib/db";
 import { QUICK_NOTE_MAX } from "@/lib/candidate/quick-note";
 import { err, ok, type ActionResult } from "./result";
-import { revalidateCandidateViews } from "./revalidate";
+import {
+  revalidateCandidateListViews,
+  revalidateCandidateViews,
+} from "./revalidate";
 import {
   applicationTags,
   applications,
@@ -43,7 +46,7 @@ export async function addContact(input: {
     note: input.note ?? null,
   });
 
-  revalidateCandidateViews();
+  revalidateCandidateViews({ scores: false, list: false });
   return ok();
 }
 
@@ -64,7 +67,7 @@ export async function addNote(input: {
     isHighlighted: input.isHighlighted ?? false,
   });
 
-  revalidateCandidateViews();
+  revalidateCandidateViews({ scores: false, list: false });
   return ok();
 }
 
@@ -106,7 +109,7 @@ export async function updateApplicationStatus(input: {
     metadata: { de: current.status, para: input.status },
   });
 
-  revalidateCandidateViews();
+  revalidateCandidateListViews();
   return ok();
 }
 
@@ -138,7 +141,7 @@ export async function addApplicationTag(input: {
     tagId: tag.id,
   });
 
-  revalidateCandidateViews();
+  revalidateCandidateViews({ scores: false, list: false });
   return ok();
 }
 
@@ -170,7 +173,7 @@ export async function toggleStarred(input: {
     metadata: { para: input.starred },
   });
 
-  revalidateCandidateViews();
+  revalidateCandidateListViews();
   return ok({ starred: input.starred });
 }
 
@@ -226,6 +229,6 @@ export async function updateQuickNote(input: {
     metadata: { de: before, para: value },
   });
 
-  revalidateCandidateViews();
+  revalidateCandidateListViews();
   return ok({ note: value });
 }

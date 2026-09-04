@@ -106,7 +106,60 @@ export function sortRows<T extends SortableRow>(
 export function normalizeSearch(text: string): string {
   return text
     .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
+    .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
     .trim();
+}
+
+/** Filtros que o Painel e o prev/próximo do perfil compartilham. */
+export type RankingFilters = {
+  campaign?: string;
+  discipline?: string;
+  search?: string;
+  sort?: string;
+  order?: string;
+};
+
+/**
+ * Filtra e ordena em memória — a mesma lógica no servidor (SSR/vizinhos) e no
+ * cliente (clique no cabeçalho sem round-trip ao Neon).
+ */
+export function applyRankingFilters<
+  T extends SortableRow & {
+    campaignSlug: string | null;
+    disciplineSlug: string | null;
+    email: string | null;
+  },
+>(rows: T[], filters: RankingFilters): T[] {
+  const term = filters.search ? normalizeSearch(filters.search) : null;
+  const filtered = rows.filter((row) => {
+    if (filters.campaign && row.campaignSlug !== filters.campaign) return false;
+    if (filters.discipline && row.disciplineSlug !== filters.discipline) {
+      return false;
+    }
+    if (!term) return true;
+    const haystack = normalizeSearch(
+      [row.candidateName, row.email ?? "", row.disciplineName ?? ""].join(" "),
+    );
+    return haystack.includes(term);
+  });
+
+  const column = SORTERS[filters.sort ?? "score"] ?? SORTERS.score;
+  const descending = (filters.order ?? "desc") !== "asc";
+  return sortRows(filtered, column, descending);
+}
+
+/**
+ * Monta a query do Painel. Ordenação padrão (`score` desc) fica FORA da URL —
+ * senão "Limpar filtros" parece um filtro ativo.
+ */
+export function painelHref(filters: RankingFilters): string {
+  const next = new URLSearchParams();
+  for (const [key, value] of Object.entries(filters)) {
+    if (!value) continue;
+    if (key === "sort" && value === "score" && filters.order !== "asc") continue;
+    if (key === "order" && filters.sort === "score" && value === "desc") continue;
+    next.set(key, value);
+  }
+  return next.size > 0 ? `/?${next}` : "/";
 }

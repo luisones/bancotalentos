@@ -2,61 +2,46 @@ import { asc } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { campaigns, disciplines } from "@/lib/db/schema";
 import { formatCoverage } from "@/lib/scoring";
-import { normalizeSearch, SORTERS, sortRows } from "@/lib/ranking-sort";
+import {
+  applyRankingFilters,
+  type RankingFilters,
+} from "@/lib/ranking-sort";
 import {
   getScoredApplications,
   type ScoredApplication,
 } from "./scored-applications";
 
 export {
+  applyRankingFilters,
   englishRank,
   SORT_KEYS,
   SORTERS,
   STATUS_ORDER,
+  type RankingFilters,
 } from "@/lib/ranking-sort";
-
-export type RankingFilters = {
-  campaign?: string;
-  discipline?: string;
-  search?: string;
-  sort?: string;
-  order?: string;
-};
 
 export type RankingRow = ScoredApplication & {
   /** "3/4" — o consolidado nunca aparece sem ela. */
   coverageLabel: string;
 };
 
+/** Todas as candidaturas pontuadas, sem filtro — o Painel filtra no cliente. */
+export async function getAllRankingRows(
+  staffUserId: string,
+): Promise<RankingRow[]> {
+  const { rows } = await getScoredApplications(staffUserId);
+  return rows.map((row) => ({
+    ...row,
+    coverageLabel: formatCoverage(row.coverage, row.totalDimensions),
+  }));
+}
+
 export async function getRankingRows(
   filters: RankingFilters,
   staffUserId: string,
 ): Promise<RankingRow[]> {
-  const { rows } = await getScoredApplications(staffUserId);
-
-  const term = filters.search ? normalizeSearch(filters.search) : null;
-  const filtered = rows.filter((row) => {
-    if (filters.campaign && row.campaignSlug !== filters.campaign) return false;
-    if (filters.discipline && row.disciplineSlug !== filters.discipline) {
-      return false;
-    }
-    if (!term) return true;
-    // Busca sem acento: "matematica" tem que achar "Matemática".
-    const haystack = normalizeSearch(
-      [row.candidateName, row.email ?? "", row.disciplineName ?? ""].join(" "),
-    );
-    return haystack.includes(term);
-  });
-
-  const withCoverage: RankingRow[] = filtered.map((row) => ({
-    ...row,
-    coverageLabel: formatCoverage(row.coverage, row.totalDimensions),
-  }));
-
-  const column = SORTERS[filters.sort ?? "score"] ?? SORTERS.score;
-  const descending = (filters.order ?? "desc") !== "asc";
-
-  return sortRows(withCoverage, column, descending);
+  const rows = await getAllRankingRows(staffUserId);
+  return applyRankingFilters(rows, filters);
 }
 
 export async function getRankingFiltersData() {

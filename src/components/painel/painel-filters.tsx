@@ -1,7 +1,9 @@
-import Link from "next/link";
+"use client";
+
 import { MicroHeader } from "@/components/liceu/surface";
 import { shortCampaignName } from "@/lib/campaign-color";
 import { disciplineAbbr } from "@/lib/discipline-abbr";
+import type { RankingFilters } from "@/lib/ranking-sort";
 import { toneTinted, type Tone } from "@/lib/tone";
 import { cn } from "@/lib/utils";
 import { SearchField } from "./search-field";
@@ -9,30 +11,23 @@ import { SearchField } from "./search-field";
 export type FilterOption = { slug: string; name: string };
 
 /**
- * Filtros de um clique.
+ * Filtros de um clique — estado local no Painel (sem RSC / Neon).
  *
- * Antes eram três `<select>` numa grade de quatro colunas, montando
- * `URLSearchParams` no cliente com `startTransition`. Um `<select>` custa dois
- * cliques e esconde as opções; e "ordenar por" saiu daqui — agora é o próprio
- * cabeçalho da tabela.
- *
- * O que sobra são links: Server Component, sem JS, e o estado ativo é a URL.
- * Só a busca continua sendo cliente, porque digitar exige estado local.
+ * Antes eram links que trocavam a URL e re-pontuavam o banco. Agora `onChange`
+ * atualiza o island; a URL acompanha via pushState.
  */
 export function PainelFilters({
   campaigns,
   disciplines,
   campaignTones,
   active,
-  hrefFor,
+  onChange,
 }: {
   campaigns: FilterOption[];
   disciplines: FilterOption[];
-  /** Cor de cada campanha, a mesma que a tabela usa no chip da linha. */
-  campaignTones: Map<string, Tone>;
-  active: { campaign?: string; discipline?: string; search?: string };
-  /** Monta a URL trocando UM filtro e preservando o resto. */
-  hrefFor: (patch: Record<string, string | undefined>) => string;
+  campaignTones: Record<string, Tone>;
+  active: RankingFilters;
+  onChange: (patch: Partial<RankingFilters>) => void;
 }) {
   const hasFilters = Boolean(
     active.campaign || active.discipline || active.search,
@@ -41,22 +36,20 @@ export function PainelFilters({
   return (
     <div className="rounded-panel border border-rule-strong bg-card px-4 py-3">
       <div className="flex flex-col gap-2.5">
-        {/* Campanha e busca dividem a linha: são dois filtros curtos, e cada
-            linha a mais aqui é uma linha a menos de candidato na tela. */}
         <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-2.5">
           <FilterRow label="Campanha">
             <Pill
-              href={hrefFor({ campaign: undefined })}
               active={!active.campaign}
+              onClick={() => onChange({ campaign: undefined })}
             >
               Todas
             </Pill>
             {campaigns.map((c) => (
               <Pill
                 key={c.slug}
-                href={hrefFor({ campaign: c.slug })}
                 active={active.campaign === c.slug}
-                tone={campaignTones.get(c.slug)}
+                tone={campaignTones[c.slug]}
+                onClick={() => onChange({ campaign: c.slug })}
               >
                 {shortCampaignName(c.name)}
               </Pill>
@@ -65,34 +58,42 @@ export function PainelFilters({
 
           <div className="flex items-center gap-3">
             {hasFilters && (
-              <Link
-                href={hrefFor({
-                  campaign: undefined,
-                  discipline: undefined,
-                  search: undefined,
-                })}
+              <button
+                type="button"
+                onClick={() =>
+                  onChange({
+                    campaign: undefined,
+                    discipline: undefined,
+                    search: undefined,
+                  })
+                }
                 className="text-note whitespace-nowrap font-semibold text-gold-text hover:underline"
               >
                 Limpar filtros
-              </Link>
+              </button>
             )}
-            <SearchField initial={active.search ?? ""} />
+            <SearchField
+              value={active.search ?? ""}
+              onChange={(search) =>
+                onChange({ search: search || undefined })
+              }
+            />
           </div>
         </div>
 
         <FilterRow label="Disciplina">
           <Pill
-            href={hrefFor({ discipline: undefined })}
             active={!active.discipline}
+            onClick={() => onChange({ discipline: undefined })}
           >
             Todas
           </Pill>
           {disciplines.map((d) => (
             <Pill
               key={d.slug}
-              href={hrefFor({ discipline: d.slug })}
               active={active.discipline === d.slug}
               title={d.name}
+              onClick={() => onChange({ discipline: d.slug })}
             >
               {disciplineAbbr(d.slug, d.name)}
             </Pill>
@@ -121,23 +122,23 @@ function FilterRow({
 }
 
 function Pill({
-  href,
   active,
   tone,
   title,
+  onClick,
   children,
 }: {
-  href: string;
   active: boolean;
   tone?: Tone;
-  /** Nome por extenso quando o rótulo é sigla — vira `title` e `aria-label`. */
   title?: string;
+  onClick: () => void;
   children: React.ReactNode;
 }) {
   return (
-    <Link
-      href={href}
-      aria-current={active ? "true" : undefined}
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
       title={title}
       aria-label={title}
       className={cn(
@@ -150,6 +151,6 @@ function Pill({
       )}
     >
       {children}
-    </Link>
+    </button>
   );
 }

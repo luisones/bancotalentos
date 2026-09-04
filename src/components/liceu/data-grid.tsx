@@ -28,8 +28,13 @@ export type SortState = {
   key: string;
   /** `desc` é o padrão em coluna de nota: a maior primeiro. */
   order: "asc" | "desc";
-  /** Monta a URL de ordenar por `key` na direção `order`. */
-  hrefFor: (key: string, order: "asc" | "desc") => string;
+  /**
+   * Clique no cliente (Painel). Quando presente, o cabeçalho vira botão e não
+   * navega — evita RSC + Neon a cada reordenação.
+   */
+  onSort?: (key: string, order: "asc" | "desc") => void;
+  /** Fallback sem JS / grids que ainda ordenam por URL. */
+  hrefFor?: (key: string, order: "asc" | "desc") => string;
 };
 
 const alignClass = {
@@ -124,9 +129,10 @@ export function DataGrid({
 }
 
 /**
- * Cabeçalho de coluna. Ordenável vira `<Link>` — Server Component, sem um byte
- * de JS de cliente para uma interação que é, literalmente, navegar para outra
- * ordenação da mesma lista.
+ * Cabeçalho de coluna ordenável.
+ *
+ * Com `onSort`, é botão (Painel: reordena no cliente). Com `hrefFor`, é link
+ * (fallback sem JS ou grids que ainda navegam).
  */
 function HeaderCell({
   column,
@@ -148,20 +154,15 @@ function HeaderCell({
   // Clicar na coluna ativa inverte; clicar numa nova começa decrescente, que é
   // o que se quer de uma coluna de nota ou de posição.
   const nextOrder = active && sort.order === "desc" ? "asc" : "desc";
-
-  return (
-    <a
-      href={sort.hrefFor(column.sortKey, nextOrder)}
-      // `aria-sort` pertence à célula de cabeçalho, não ao link dentro dela —
-      // e este grid não tem role de tabela. A direção vai no texto acessível.
-      className={cn(
-        base,
-        "inline-flex items-center gap-1 hover:text-navy",
-        column.align === "end" && "justify-end",
-        column.align === "center" && "justify-center",
-        active && "text-navy",
-      )}
-    >
+  const className = cn(
+    base,
+    "inline-flex items-center gap-1 hover:text-navy",
+    column.align === "end" && "justify-end",
+    column.align === "center" && "justify-center",
+    active && "text-navy",
+  );
+  const label = (
+    <>
       {column.label}
       <span aria-hidden className={active ? "text-gold-text" : "opacity-0"}>
         {sort.order === "asc" ? "▲" : "▼"}
@@ -171,6 +172,25 @@ function HeaderCell({
           ? `ordenado por ${column.label}, ${sort.order === "asc" ? "crescente" : "decrescente"}. Ativar para inverter.`
           : `ordenar por ${column.label}`}
       </span>
+    </>
+  );
+
+  if (sort.onSort) {
+    return (
+      <button
+        type="button"
+        onClick={() => sort.onSort!(column.sortKey!, nextOrder)}
+        className={cn(className, "cursor-pointer border-0 bg-transparent p-0")}
+      >
+        {label}
+      </button>
+    );
+  }
+
+  const href = sort.hrefFor?.(column.sortKey, nextOrder) ?? "#";
+  return (
+    <a href={href} className={className}>
+      {label}
     </a>
   );
 }

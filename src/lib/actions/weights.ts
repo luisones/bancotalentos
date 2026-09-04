@@ -11,7 +11,7 @@ import {
 } from "@/lib/db/schema";
 import { getScoringCatalog } from "@/lib/queries/scoring-data";
 import { err, ok, type ActionResult } from "./result";
-import { revalidateCandidateViews } from "./revalidate";
+import { revalidateCandidateScoreViews } from "./revalidate";
 
 export type WeightInput = {
   /** Peso de cada item do Resultado: os grupos e as dimensões sem grupo. */
@@ -107,7 +107,7 @@ export async function saveWeightConfig(
     },
   });
 
-  revalidateCandidateViews();
+  revalidateCandidateScoreViews();
   return ok();
 }
 

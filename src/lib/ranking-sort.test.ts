@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
+  applyRankingFilters,
   englishRank,
+  painelHref,
   sortRows,
   STATUS_ORDER,
   type SortableRow,
@@ -9,6 +11,37 @@ import {
 /** Só os campos que a ordenação lê; o resto do row não participa. */
 function row(name: string, consolidated: number | null): SortableRow {
   return { candidateName: name, consolidated } as SortableRow;
+}
+
+type FilterRow = SortableRow & {
+  campaignSlug: string | null;
+  disciplineSlug: string | null;
+  email: string | null;
+};
+
+function filterRow(
+  name: string,
+  opts: {
+    score?: number | null;
+    campaign?: string | null;
+    discipline?: string | null;
+    email?: string | null;
+  } = {},
+): FilterRow {
+  return {
+    candidateName: name,
+    consolidated: opts.score ?? null,
+    campaignSlug: opts.campaign ?? null,
+    disciplineSlug: opts.discipline ?? null,
+    email: opts.email ?? null,
+    disciplineName: opts.discipline ?? null,
+    appliedAt: null,
+    englishLevel: null,
+    kmSantoAndre: null,
+    kmSaoCaetano: null,
+    status: "novo",
+    scores: {},
+  };
 }
 
 describe("ordenação do Painel", () => {
@@ -24,7 +57,6 @@ describe("ordenação do Painel", () => {
       pick: (r: SortableRow) => r.consolidated,
     };
 
-    // Decrescente: a maior primeiro, os sem nota no fim.
     expect(sortRows(rows, column, true).map((r) => r.candidateName)).toEqual([
       "alta",
       "baixa",
@@ -32,8 +64,6 @@ describe("ordenação do Painel", () => {
       "outra sem nota",
     ]);
 
-    // Crescente: a menor primeiro — e os sem nota CONTINUAM no fim. Inverter a
-    // direção não pode promover quem não tem nota ao topo.
     expect(sortRows(rows, column, false).map((r) => r.candidateName)).toEqual([
       "baixa",
       "alta",
@@ -60,7 +90,6 @@ describe("ordenação do Painel", () => {
     expect(englishRank("B1-B2 (intermediário)")).toBe(2);
     expect(englishRank("C1-C2 (avançado/fluente)")).toBe(3);
     expect(englishRank(null)).toBeNull();
-    // Rótulo que ninguém previu não vira 0 — vira ausência, e vai para o fim.
     expect(englishRank("nativo")).toBeNull();
   });
 
@@ -68,5 +97,65 @@ describe("ordenação do Painel", () => {
     expect(STATUS_ORDER.novo).toBeLessThan(STATUS_ORDER.em_avaliacao);
     expect(STATUS_ORDER.em_duvida).toBeLessThan(STATUS_ORDER.avancar);
     expect(STATUS_ORDER.avancar).toBeLessThan(STATUS_ORDER.selecionado);
+  });
+});
+
+describe("filtro do Painel", () => {
+  const bank = [
+    filterRow("Ana Matemática", {
+      score: 9,
+      campaign: "2026-scs",
+      discipline: "matematica",
+      email: "ana@x.com",
+    }),
+    filterRow("Bruno História", {
+      score: 7,
+      campaign: "2025-efaf",
+      discipline: "historia",
+    }),
+    filterRow("Carla Sem Nota", {
+      score: null,
+      campaign: "2026-scs",
+      discipline: "matematica",
+    }),
+  ];
+
+  it("filtra por campanha e disciplina sem tocar no Neon", () => {
+    const rows = applyRankingFilters(bank, {
+      campaign: "2026-scs",
+      discipline: "matematica",
+    });
+    expect(rows.map((r) => r.candidateName)).toEqual([
+      "Ana Matemática",
+      "Carla Sem Nota",
+    ]);
+  });
+
+  it("busca sem acento: matematica acha Matemática", () => {
+    const rows = applyRankingFilters(bank, { search: "matematica" });
+    expect(rows.map((r) => r.candidateName)).toEqual([
+      "Ana Matemática",
+      "Carla Sem Nota",
+    ]);
+  });
+
+  it("ordena por score com ausente no fim", () => {
+    const rows = applyRankingFilters(bank, {
+      campaign: "2026-scs",
+      sort: "score",
+      order: "desc",
+    });
+    expect(rows.map((r) => r.candidateName)).toEqual([
+      "Ana Matemática",
+      "Carla Sem Nota",
+    ]);
+  });
+
+  it("painelHref omite a ordenação padrão", () => {
+    expect(painelHref({ sort: "score", order: "desc" })).toBe("/");
+    expect(painelHref({ sort: "name", order: "asc" })).toBe(
+      "/?sort=name&order=asc",
+    );
+    expect(painelHref({ campaign: "2026-scs" })).toBe("/?campaign=2026-scs");
   });
 });

@@ -11,7 +11,7 @@ import {
   subjectiveAnswers,
 } from "@/lib/db/schema";
 import { err, ok, type ActionResult } from "./result";
-import { revalidateCandidateViews } from "./revalidate";
+import { revalidateCandidateScoreViews } from "./revalidate";
 
 export type SaveEvaluationInput = {
   applicationId: string;
@@ -108,7 +108,7 @@ export async function saveEvaluation(
     metadata: { dimensionId: input.dimensionId, score: input.score },
   });
 
-  revalidateCandidateViews();
+  revalidateCandidateScoreViews();
   return ok({ evaluationId, score: input.score, revisionCreated });
 }
 
@@ -175,7 +175,7 @@ export async function overrideAnswerScore(input: {
     },
   });
 
-  revalidateCandidateViews();
+  revalidateCandidateScoreViews();
   return ok({ percent: input.percent });
 }
 
@@ -202,7 +202,7 @@ export async function peekBlindEvaluation(
     entityId: evaluationId,
   });
 
-  revalidateCandidateViews();
+  revalidateCandidateScoreViews();
   return ok();
 }
 
@@ -228,6 +228,6 @@ export async function peekBlindForDimension(
     metadata: { dimensionId },
   });
 
-  revalidateCandidateViews();
+  revalidateCandidateScoreViews();
   return ok();
 }

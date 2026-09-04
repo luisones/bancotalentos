@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import {
   boolean,
   index,
@@ -363,7 +364,12 @@ export const subjectiveAnswers = pgTable(
     ),
     overrideAt: timestamp("override_at", { withTimezone: true }),
   },
-  (t) => [index("subjective_answers_application_id_idx").on(t.applicationId)],
+  (t) => [
+    index("subjective_answers_application_id_idx").on(t.applicationId),
+    index("subjective_answers_has_override_idx")
+      .on(t.applicationId)
+      .where(sql`${t.overrideScore} is not null`),
+  ],
 );
 
 export const evaluations = pgTable(
@@ -454,22 +460,26 @@ export const evaluationRevisions = pgTable("evaluation_revisions", {
     .notNull(),
 });
 
-export const llmEvaluations = pgTable("llm_evaluations", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  answerId: uuid("answer_id")
-    .references(() => subjectiveAnswers.id)
-    .notNull(),
-  providerCode: text("provider_code").notNull(),
-  modelName: text("model_name"),
-  scoreRaw: numeric("score_raw", { precision: 8, scale: 4 }).notNull(),
-  scaleMax: numeric("scale_max", { precision: 6, scale: 2 })
-    .notNull()
-    .default("30"),
-  promptSnapshot: text("prompt_snapshot"),
-  createdAt: timestamp("created_at", { withTimezone: true })
-    .defaultNow()
-    .notNull(),
-});
+export const llmEvaluations = pgTable(
+  "llm_evaluations",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    answerId: uuid("answer_id")
+      .references(() => subjectiveAnswers.id)
+      .notNull(),
+    providerCode: text("provider_code").notNull(),
+    modelName: text("model_name"),
+    scoreRaw: numeric("score_raw", { precision: 8, scale: 4 }).notNull(),
+    scaleMax: numeric("scale_max", { precision: 6, scale: 2 })
+      .notNull()
+      .default("30"),
+    promptSnapshot: text("prompt_snapshot"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => [index("llm_evaluations_answer_id_idx").on(t.answerId)],
+);
 
 export const teachingPracticeScores = pgTable(
   "teaching_practice_scores",

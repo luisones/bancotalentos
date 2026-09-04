@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth/server";
@@ -15,12 +16,20 @@ export type StaffUser = {
 
 export { isAllowedEmailDomain };
 
-export async function getSession() {
+/**
+ * Uma sessão por request — layout, header e página chamavam `getSession`
+ * três vezes (três HTTP ao Neon Auth) sem isso.
+ */
+export const getSession = cache(async () => {
   const { data } = await auth.getSession();
   return data ?? null;
-}
+});
 
-export async function getStaffUser(): Promise<StaffUser | null> {
+/**
+ * Um `staff_users` por request. Sem `cache`, layout + header + página
+ * multiplicavam SELECT (e às vezes UPDATE de `neon_auth_user_id`).
+ */
+export const getStaffUser = cache(async (): Promise<StaffUser | null> => {
   const session = await getSession();
   if (!session?.user?.email) return null;
 
@@ -52,7 +61,7 @@ export async function getStaffUser(): Promise<StaffUser | null> {
     name: staff.name,
     role: staff.role,
   };
-}
+});
 
 export async function requireStaff(
   roles?: StaffRole[],

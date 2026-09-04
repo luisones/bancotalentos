@@ -1,6 +1,7 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
+import { APPLICATION_LIST_TAG } from "@/lib/queries/cached-data";
 import { canWrite, requireStaff } from "@/lib/auth/staff";
 import { db } from "@/lib/db";
 import { applications, auditEvents, candidates } from "@/lib/db/schema";
@@ -54,6 +55,7 @@ export async function createCandidate(input: CreateCandidateInput) {
     metadata: { applicationId: application.id },
   });
 
+  updateTag(APPLICATION_LIST_TAG);
   revalidatePath("/");
   revalidatePath("/(app)", "page");
   return { success: true, candidateId: candidate.id };

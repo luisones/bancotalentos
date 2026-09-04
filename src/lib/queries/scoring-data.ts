@@ -66,6 +66,23 @@ export type ScoreInputs = {
   overriddenDissertativeByApp: Map<string, number>;
 };
 
+/** Payload serializável do Data Cache (sem Map / Date). */
+export type CachedScoringPayload = {
+  catalog: ScoringCatalog;
+  evals: Array<{
+    applicationId: string;
+    dimensionCode: string;
+    scoreRaw: string;
+    scaleMax: string;
+    evaluatorStaffId: string;
+    blindPeekedAt: string | null;
+  }>;
+  imported: LoadedImported[];
+  lessonEvals: Array<{ id: string; applicationId: string }>;
+  lessonScores: Array<{ evalId: string; score: string }>;
+  overridden: Array<[string, number]>;
+};
+
 function latestWeightConfig() {
   return db
     .select({ id: weightConfigs.id })
@@ -219,12 +236,13 @@ function groupBy<T>(items: T[], key: (item: T) => string): Map<string, T[]> {
   return map;
 }
 
-async function foldScoreInputs(
+function foldScoreInputs(
   evals: LoadedEval[],
   imported: LoadedImported[],
   lessonEvals: Array<{ id: string; applicationId: string }>,
+  lessonScores: Array<{ evalId: string; score: string }>,
   overriddenDissertativeByApp: Map<string, number>,
-): Promise<ScoreInputs> {
+): ScoreInputs {
   const evalsByApp = new Map<string, LoadedEval[]>();
   const importedByApp = new Map<string, LoadedImported[]>();
   const lessonScoreByApp = new Map<string, number | null>();
@@ -242,18 +260,11 @@ async function foldScoreInputs(
   }
 
   if (lessonEvals.length > 0) {
-    const evalIds = lessonEvals.map((e) => e.id);
-    const scores = await db
-      .select({
-        evalId: lessonTestScores.lessonTestEvaluationId,
-        score: lessonTestScores.score,
-      })
-      .from(lessonTestScores)
-      .where(inArray(lessonTestScores.lessonTestEvaluationId, evalIds));
-
+    const wanted = new Set(lessonEvals.map((e) => e.id));
     const appByEval = new Map(lessonEvals.map((e) => [e.id, e.applicationId]));
     const scoresByEval = new Map<string, number[]>();
-    for (const s of scores) {
+    for (const s of lessonScores) {
+      if (!wanted.has(s.evalId)) continue;
       const list = scoresByEval.get(s.evalId) ?? [];
       list.push(Number(s.score));
       scoresByEval.set(s.evalId, list);
@@ -280,6 +291,86 @@ async function foldScoreInputs(
     importedByApp,
     lessonScoreByApp,
     overriddenDissertativeByApp,
+  };
+}
+
+export function foldScoreInputsFromPayload(
+  payload: CachedScoringPayload,
+): ScoreInputs {
+  return foldScoreInputs(
+    payload.evals.map((e) => ({
+      ...e,
+      blindPeekedAt: e.blindPeekedAt ? new Date(e.blindPeekedAt) : null,
+    })),
+    payload.imported,
+    payload.lessonEvals,
+    payload.lessonScores,
+    new Map(payload.overridden),
+  );
+}
+
+/**
+ * Varredura completa das fontes de nota — o que o Data Cache guarda.
+ * Sem staff: consolidado cego monta depois, por avaliador.
+ */
+export async function loadFullScoringPayload(): Promise<CachedScoringPayload> {
+  const [
+    [catalogRows, itemRows, evals, imported, lessonEvals, lessonScores],
+    overridden,
+  ] = await Promise.all([
+    db.batch([
+      scoringCatalogQuery(),
+      itemWeightsQuery(),
+      db
+        .select({
+          applicationId: evaluations.applicationId,
+          dimensionCode: dimensions.code,
+          scoreRaw: evaluations.scoreRaw,
+          scaleMax: evaluations.scaleMax,
+          evaluatorStaffId: evaluations.evaluatorStaffId,
+          blindPeekedAt: evaluations.blindPeekedAt,
+        })
+        .from(evaluations)
+        .innerJoin(dimensions, eq(dimensions.id, evaluations.dimensionId)),
+      db
+        .select({
+          applicationId: importedDimensionScores.applicationId,
+          dimensionCode: dimensions.code,
+          score: importedDimensionScores.score,
+        })
+        .from(importedDimensionScores)
+        .innerJoin(
+          dimensions,
+          eq(dimensions.id, importedDimensionScores.dimensionId),
+        ),
+      db
+        .select({
+          id: lessonTestEvaluations.id,
+          applicationId: lessonTestEvaluations.applicationId,
+        })
+        .from(lessonTestEvaluations),
+      db
+        .select({
+          evalId: lessonTestScores.lessonTestEvaluationId,
+          score: lessonTestScores.score,
+        })
+        .from(lessonTestScores),
+    ]),
+    getOverriddenDissertativeScores(),
+  ]);
+
+  return {
+    catalog: catalogFromRows(catalogRows, itemRows),
+    evals: evals.map((e) => ({
+      ...e,
+      blindPeekedAt: e.blindPeekedAt
+        ? e.blindPeekedAt.toISOString()
+        : null,
+    })),
+    imported,
+    lessonEvals,
+    lessonScores,
+    overridden: [...overridden.entries()],
   };
 }
 
@@ -341,61 +432,79 @@ export async function prefetchScoringData(applicationIds?: string[]) {
     ] as const;
   }
 
-  const idFilter = applicationIds
-    ? inArray(evaluations.applicationId, applicationIds)
-    : undefined;
-  const importedFilter = applicationIds
-    ? inArray(importedDimensionScores.applicationId, applicationIds)
-    : undefined;
-  const lessonFilter = applicationIds
-    ? inArray(lessonTestEvaluations.applicationId, applicationIds)
-    : undefined;
+  // Banco inteiro: Data Cache. Escopo por IDs: consulta direta (perfil raro /
+  // buildDimensionScoresForApplications).
+  if (!applicationIds) {
+    const { getCachedScoringPayload } = await import("./cached-data");
+    const payload = await getCachedScoringPayload();
+    return [payload.catalog, foldScoreInputsFromPayload(payload)] as const;
+  }
 
-  // O lote e os overrides não dependem um do outro. Em série somavam dois
-  // round-trips ao banco por render do Painel.
-  const [[catalogRows, itemRows, evals, imported, lessonEvals], overridden] =
-    await Promise.all([
-      db.batch([
-        scoringCatalogQuery(),
-        itemWeightsQuery(),
-        db
-          .select({
-            applicationId: evaluations.applicationId,
-            dimensionCode: dimensions.code,
-            scoreRaw: evaluations.scoreRaw,
-            scaleMax: evaluations.scaleMax,
-            evaluatorStaffId: evaluations.evaluatorStaffId,
-            blindPeekedAt: evaluations.blindPeekedAt,
-          })
-          .from(evaluations)
-          .innerJoin(dimensions, eq(dimensions.id, evaluations.dimensionId))
-          .where(idFilter),
-        db
-          .select({
-            applicationId: importedDimensionScores.applicationId,
-            dimensionCode: dimensions.code,
-            score: importedDimensionScores.score,
-          })
-          .from(importedDimensionScores)
-          .innerJoin(
-            dimensions,
-            eq(dimensions.id, importedDimensionScores.dimensionId),
-          )
-          .where(importedFilter),
-        db
-          .select({
-            id: lessonTestEvaluations.id,
-            applicationId: lessonTestEvaluations.applicationId,
-          })
-          .from(lessonTestEvaluations)
-          .where(lessonFilter),
-      ]),
-      // Só quem tem override entra nesta consulta; para o resto ela devolve
-      // vazio e o valor importado segue valendo.
-      getOverriddenDissertativeScores(applicationIds),
-    ]);
+  const idFilter = inArray(evaluations.applicationId, applicationIds);
+  const importedFilter = inArray(
+    importedDimensionScores.applicationId,
+    applicationIds,
+  );
+  const lessonFilter = inArray(
+    lessonTestEvaluations.applicationId,
+    applicationIds,
+  );
 
-  const inputs = await foldScoreInputs(evals, imported, lessonEvals, overridden);
+  const [
+    [catalogRows, itemRows, evals, imported, lessonEvals, lessonScores],
+    overridden,
+  ] = await Promise.all([
+    db.batch([
+      scoringCatalogQuery(),
+      itemWeightsQuery(),
+      db
+        .select({
+          applicationId: evaluations.applicationId,
+          dimensionCode: dimensions.code,
+          scoreRaw: evaluations.scoreRaw,
+          scaleMax: evaluations.scaleMax,
+          evaluatorStaffId: evaluations.evaluatorStaffId,
+          blindPeekedAt: evaluations.blindPeekedAt,
+        })
+        .from(evaluations)
+        .innerJoin(dimensions, eq(dimensions.id, evaluations.dimensionId))
+        .where(idFilter),
+      db
+        .select({
+          applicationId: importedDimensionScores.applicationId,
+          dimensionCode: dimensions.code,
+          score: importedDimensionScores.score,
+        })
+        .from(importedDimensionScores)
+        .innerJoin(
+          dimensions,
+          eq(dimensions.id, importedDimensionScores.dimensionId),
+        )
+        .where(importedFilter),
+      db
+        .select({
+          id: lessonTestEvaluations.id,
+          applicationId: lessonTestEvaluations.applicationId,
+        })
+        .from(lessonTestEvaluations)
+        .where(lessonFilter),
+      db
+        .select({
+          evalId: lessonTestScores.lessonTestEvaluationId,
+          score: lessonTestScores.score,
+        })
+        .from(lessonTestScores),
+    ]),
+    getOverriddenDissertativeScores(applicationIds),
+  ]);
+
+  const inputs = foldScoreInputs(
+    evals,
+    imported,
+    lessonEvals,
+    lessonScores,
+    overridden,
+  );
   return [catalogFromRows(catalogRows, itemRows), inputs] as const;
 }
 

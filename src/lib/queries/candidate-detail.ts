@@ -152,83 +152,88 @@ export async function getCandidateDetail(
   }
 
   const [
-    docs,
-    answerRows,
+    [
+      docs,
+      answerRows,
+      practices,
+      lessonEvals,
+      ownEvalRows,
+      noteRows,
+      allDimensions,
+    ],
     answerScores,
-    practices,
-    lessonEvals,
-    ownEvalRows,
-    noteRows,
-    allDimensions,
   ] = await Promise.all([
-    db
-      .select()
-      .from(documents)
-      .where(inArray(documents.applicationId, applicationIds)),
-    db
-      .select({
-        applicationId: subjectiveAnswers.applicationId,
-        answerId: subjectiveAnswers.id,
-        answerText: subjectiveAnswers.answerText,
-        code: instruments.code,
-        promptText: instruments.promptText,
-        scaleMax: instruments.scaleMax,
-      })
-      .from(subjectiveAnswers)
-      .innerJoin(instruments, eq(instruments.id, subjectiveAnswers.instrumentId))
-      .where(inArray(subjectiveAnswers.applicationId, applicationIds)),
-    getAnswerScores(applicationIds),
-    db
-      .select()
-      .from(teachingPracticeScores)
-      .where(inArray(teachingPracticeScores.applicationId, applicationIds)),
-    db
-      .select({
-        id: lessonTestEvaluations.id,
-        applicationId: lessonTestEvaluations.applicationId,
-        evaluatedAt: lessonTestEvaluations.evaluatedAt,
-        comment: lessonTestEvaluations.comment,
-        evaluatorName: staffUsers.name,
-      })
-      .from(lessonTestEvaluations)
-      .leftJoin(
-        staffUsers,
-        eq(staffUsers.id, lessonTestEvaluations.evaluatorStaffId),
-      )
-      .where(inArray(lessonTestEvaluations.applicationId, applicationIds)),
-    // Só as PRÓPRIAS avaliações: garante pelo tipo que a UI de edição nunca
-    // recebe a nota de outro avaliador.
-    db
-      .select({
-        id: evaluations.id,
-        applicationId: evaluations.applicationId,
-        dimensionId: evaluations.dimensionId,
-        dimensionCode: dimensions.code,
-        scoreRaw: evaluations.scoreRaw,
-        scaleMax: evaluations.scaleMax,
-        comment: evaluations.comment,
-        updatedAt: evaluations.updatedAt,
-      })
-      .from(evaluations)
-      .innerJoin(dimensions, eq(dimensions.id, evaluations.dimensionId))
-      .where(
-        and(
-          inArray(evaluations.applicationId, applicationIds),
-          eq(evaluations.evaluatorStaffId, staffUserId),
+    // Sete selects num HTTP: latência us-east-1 × 7 era o perfil "sempre lento".
+    db.batch([
+      db
+        .select()
+        .from(documents)
+        .where(inArray(documents.applicationId, applicationIds)),
+      db
+        .select({
+          applicationId: subjectiveAnswers.applicationId,
+          answerId: subjectiveAnswers.id,
+          answerText: subjectiveAnswers.answerText,
+          code: instruments.code,
+          promptText: instruments.promptText,
+          scaleMax: instruments.scaleMax,
+        })
+        .from(subjectiveAnswers)
+        .innerJoin(instruments, eq(instruments.id, subjectiveAnswers.instrumentId))
+        .where(inArray(subjectiveAnswers.applicationId, applicationIds)),
+      db
+        .select()
+        .from(teachingPracticeScores)
+        .where(inArray(teachingPracticeScores.applicationId, applicationIds)),
+      db
+        .select({
+          id: lessonTestEvaluations.id,
+          applicationId: lessonTestEvaluations.applicationId,
+          evaluatedAt: lessonTestEvaluations.evaluatedAt,
+          comment: lessonTestEvaluations.comment,
+          evaluatorName: staffUsers.name,
+        })
+        .from(lessonTestEvaluations)
+        .leftJoin(
+          staffUsers,
+          eq(staffUsers.id, lessonTestEvaluations.evaluatorStaffId),
+        )
+        .where(inArray(lessonTestEvaluations.applicationId, applicationIds)),
+      // Só as PRÓPRIAS avaliações: garante pelo tipo que a UI de edição nunca
+      // recebe a nota de outro avaliador.
+      db
+        .select({
+          id: evaluations.id,
+          applicationId: evaluations.applicationId,
+          dimensionId: evaluations.dimensionId,
+          dimensionCode: dimensions.code,
+          scoreRaw: evaluations.scoreRaw,
+          scaleMax: evaluations.scaleMax,
+          comment: evaluations.comment,
+          updatedAt: evaluations.updatedAt,
+        })
+        .from(evaluations)
+        .innerJoin(dimensions, eq(dimensions.id, evaluations.dimensionId))
+        .where(
+          and(
+            inArray(evaluations.applicationId, applicationIds),
+            eq(evaluations.evaluatorStaffId, staffUserId),
+          ),
         ),
-      ),
-    db
-      .select({
-        id: notes.id,
-        body: notes.body,
-        createdAt: notes.createdAt,
-        author: staffUsers.name,
-      })
-      .from(notes)
-      .leftJoin(staffUsers, eq(staffUsers.id, notes.staffId))
-      .where(eq(notes.candidateId, candidateId))
-      .orderBy(desc(notes.createdAt)),
-    db.select().from(dimensions).orderBy(dimensions.sortOrder),
+      db
+        .select({
+          id: notes.id,
+          body: notes.body,
+          createdAt: notes.createdAt,
+          author: staffUsers.name,
+        })
+        .from(notes)
+        .leftJoin(staffUsers, eq(staffUsers.id, notes.staffId))
+        .where(eq(notes.candidateId, candidateId))
+        .orderBy(desc(notes.createdAt)),
+      db.select().from(dimensions).orderBy(dimensions.sortOrder),
+    ]),
+    getAnswerScores(applicationIds),
   ]);
 
   // Critérios da aula-teste, um nível abaixo das avaliações.
