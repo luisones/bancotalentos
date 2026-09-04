@@ -156,7 +156,12 @@ function HeaderCell({
   const nextOrder = active && sort.order === "desc" ? "asc" : "desc";
   const className = cn(
     base,
-    "inline-flex items-center gap-1 hover:text-navy",
+    // `flex w-full`, e NÃO `inline-flex`: uma caixa inline-flex numa célula de
+    // grid encolhe até o conteúdo e ancora no início da célula, então
+    // `justify-end` alinhava o texto dentro da própria caixa e não na coluna.
+    // O efeito era o cabeçalho de toda coluna numérica desencontrado do número
+    // que ele nomeia — de longe o defeito visual mais visível da tabela.
+    "flex w-full items-center gap-1 hover:text-navy",
     column.align === "end" && "justify-end",
     column.align === "center" && "justify-center",
     active && "text-navy",
@@ -203,6 +208,7 @@ export function DataGridRow({
   cells,
   href,
   tone,
+  stacked,
   className,
 }: {
   cells: React.ReactNode[];
@@ -210,6 +216,15 @@ export function DataGridRow({
   href?: string;
   /** Marcador de 2px à esquerda. */
   tone?: Tone;
+  /**
+   * Composição própria para o celular, no lugar do empilhamento automático.
+   *
+   * Empilhar dez células numa coluna produz dez linhas de "RÓTULO valor" com
+   * metade da largura vazia à direita — ilegível e alto. Com `stacked`, a
+   * linha desenha um registro pensado para a tela estreita e as células do
+   * grid saem de cena.
+   */
+  stacked?: React.ReactNode;
   className?: string;
 }) {
   const inner = (
@@ -223,15 +238,24 @@ export function DataGridRow({
           )}
         />
       )}
-      {cells}
+      {/* `md:contents` e `max-md:hidden`, os dois com variante: um `contents`
+          sem variante disputaria a mesma declaração `display` com o `hidden` e
+          o vencedor sairia da ordem de geração do CSS, não do código. */}
+      {stacked ? (
+        <div className="max-md:hidden md:contents">{cells}</div>
+      ) : (
+        cells
+      )}
+      {stacked && <div className="md:hidden">{stacked}</div>}
     </>
   );
 
   const base = cn(
     "relative grid items-center gap-3 border-b border-rule-weak px-3 py-row-y",
     "[grid-template-columns:var(--dg-cols)]",
-    // Abaixo do limiar do container a linha empilha e vira um registro.
-    "max-md:!grid-cols-1 max-md:gap-1",
+    // Abaixo do limiar do container a linha empilha e vira um registro. Com
+    // `stacked` quem empilha é o próprio consumidor: a linha só vira bloco.
+    stacked ? "max-md:!block" : "max-md:!grid-cols-1 max-md:gap-1",
     href && "hover:bg-row-hover",
     className,
   );
@@ -259,6 +283,11 @@ export function Cell({
   stackLabel,
   /** Some quando a linha empilha. Espelha `GridColumn.hideOnStack`. */
   hideOnStack,
+  /**
+   * A célula contém um controle que manda no próprio alinhamento. Sem isto, o
+   * `max-md:!text-left` do empilhamento sobrescreve o alinhamento do botão.
+   */
+  interactive,
   className,
 }: {
   children: React.ReactNode;
@@ -267,6 +296,7 @@ export function Cell({
   muted?: boolean;
   stackLabel?: string;
   hideOnStack?: boolean;
+  interactive?: boolean;
   className?: string;
 }) {
   return (
@@ -275,7 +305,7 @@ export function Cell({
       className={cn(
         "text-cell min-w-0",
         alignClass[align],
-        "max-md:!text-left",
+        !interactive && "max-md:!text-left",
         hideOnStack && "max-md:hidden",
         muted && "text-muted-foreground",
         className,

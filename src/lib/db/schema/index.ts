@@ -554,6 +554,18 @@ export const lessonTestEvaluations = pgTable(
   (t) => [
     index("lesson_test_evaluations_application_id_idx").on(t.applicationId),
     uniqueIndex("lesson_test_evaluations_external_ref_idx").on(t.externalRef),
+    /**
+     * Uma avaliação por avaliador, no que é lançado PELA INTERFACE.
+     *
+     * O que veio da planilha tem `external_ref` e fica fora: lá a mesma pessoa
+     * podia avaliar a mesma candidatura em vagas diferentes, e essas linhas
+     * são histórico que não se reescreve. Sem esta trava, salvar o formulário
+     * duas vezes criava duas avaliações e a média das médias se diluía — a
+     * segunda nota "puxava" a primeira em vez de substituí-la.
+     */
+    uniqueIndex("lesson_test_evaluations_manual_idx")
+      .on(t.applicationId, t.evaluatorStaffId)
+      .where(sql`${t.externalRef} is null`),
   ],
 );
 

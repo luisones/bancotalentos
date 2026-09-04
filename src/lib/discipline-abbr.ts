@@ -9,10 +9,15 @@
  * O mapa é por slug (estável no banco) e não por nome, e as duas famílias que
  * se repetem — Português e Polivalente — ganham um qualificador em vez de
  * colidirem em "POR" e "POLI".
+ *
+ * `grupo-portugues` não é disciplina: é o slug do grupo de `discipline-group.ts`,
+ * que o filtro usa no lugar das duas variantes. Ele fica "POR" limpo justamente
+ * porque, colapsadas, elas deixam de colidir.
  */
 const ABBR: Record<string, string> = {
   historia: "HIS",
   biologia: "BIO",
+  "grupo-portugues": "POR",
   "portugues-producao-e-interpretacao-de-texto": "POR TEX",
   matematica: "MAT",
   geografia: "GEO",

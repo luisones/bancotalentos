@@ -3,6 +3,10 @@
 import { MicroHeader } from "@/components/liceu/surface";
 import { shortCampaignName } from "@/lib/campaign-color";
 import { disciplineAbbr } from "@/lib/discipline-abbr";
+import {
+  disciplineFilterOptions,
+  disciplineGroupSlug,
+} from "@/lib/discipline-group";
 import type { RankingFilters } from "@/lib/ranking-sort";
 import { toneTinted, type Tone } from "@/lib/tone";
 import { cn } from "@/lib/utils";
@@ -88,10 +92,18 @@ export function PainelFilters({
           >
             Todas
           </Pill>
-          {disciplines.map((d) => (
+          {/* As duas variantes de Português entram como uma pílula só: quem
+              filtra por área quer os 91 candidatos, não 63 de um lado e 28 do
+              outro. O nome completo continua na linha de cada candidato. */}
+          {disciplineFilterOptions(disciplines).map((d) => (
             <Pill
               key={d.slug}
-              active={active.discipline === d.slug}
+              // Comparação por grupo: um link antigo com
+              // `discipline=portugues-literatura` acende a pílula "Português"
+              // em vez de nenhuma.
+              active={
+                disciplineGroupSlug(active.discipline ?? null) === d.slug
+              }
               title={d.name}
               onClick={() => onChange({ discipline: d.slug })}
             >

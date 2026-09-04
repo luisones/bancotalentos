@@ -114,6 +114,7 @@ export const auditActionLabels: Record<string, string> = {
   starred_updated: "Destaque da equipe alterado",
   status_updated: "Situação alterada",
   evaluation_saved: "Avaliação registrada",
+  lesson_test_saved: "Aula-teste avaliada por critérios",
   answer_override: "Nota de uma pergunta substituída",
   weights_updated: "Pesos do Resultado alterados",
   quick_note_updated: "Nota rápida alterada",
@@ -123,6 +124,34 @@ export const auditActionLabels: Record<string, string> = {
   staff_role_updated: "Papel da equipe alterado",
   staff_deactivated: "Acesso removido",
   staff_reactivated: "Acesso restaurado",
+};
+
+/**
+ * O que cada critério da aula-teste afere.
+ *
+ * O nome sozinho não diz o que avaliar: "Presença" pode ser postura, pode ser
+ * assiduidade, e dois avaliadores dando nota ao mesmo nome com perguntas
+ * diferentes na cabeça produzem uma média que não significa nada. A pergunta
+ * fica ao lado do campo, no momento de dar a nota.
+ *
+ * Chaveado por `lesson_test_criteria.code` (o slug do nome, como o seed grava).
+ * Critério novo sem subtítulo aparece sem subtítulo — não some.
+ */
+export const lessonTestCriterionHints: Record<string, string> = {
+  empatia: "Capacidade de estabelecer vínculos",
+  presenca: "Mantém o controle e a atenção?",
+  linguagem: "Linguagem e dress code adequados ao público-alvo",
+  preparacao: "A aula é bem estruturada?",
+  material: "Material (PPT, impresso) pertinente?",
+  afericao: "Propõe aferir a aprendizagem?",
+  clareza: "Conteúdo foi assimilado?",
+  paciencia: "Demonstra ser paciente?",
+  responsabilidade: "Consciência de sua responsabilidade?",
+  energia: "Nível adequado ao segmento?",
+  lousa: "Legível e adequada?",
+  "resolucao-exercicio": "Clareza na resolução",
+  voz: "Tom de voz",
+  confianca: "Transmite confiança?",
 };
 
 /** Práticas didáticas autodeclaradas na planilha de inscrição. */

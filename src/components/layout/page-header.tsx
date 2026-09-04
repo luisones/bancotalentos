@@ -26,10 +26,27 @@ export function PageHeader({
   const last = breadcrumb[breadcrumb.length - 1];
   const parent = breadcrumb.length > 1 ? breadcrumb[breadcrumb.length - 2] : undefined;
 
+  /*
+    Sem título, as ações sobem para a linha do breadcrumb.
+
+    A página do professor não tem título — o nome do candidato é o h1 do cartão
+    de identidade, logo abaixo. Então `right` abria uma segunda faixa só para
+    ele, com o breadcrumb sozinho numa linha de 20px e o próximo/anterior noutra.
+    Duas linhas de cabeçalho antes do primeiro dado da página.
+  */
+  const inlineRight = Boolean(right) && !title && breadcrumb.length > 0;
+
   return (
     <div className={cn("pb-3.5 pt-[18px]", className)}>
       {breadcrumb.length > 0 && (
-        <nav aria-label="Trilha de navegação">
+        <nav
+          aria-label="Trilha de navegação"
+          className={
+            inlineRight
+              ? "flex flex-wrap items-center justify-between gap-x-4 gap-y-2"
+              : undefined
+          }
+        >
           {/* Celular: só o pai como volta, e o item atual. */}
           <div className="text-dense flex items-center gap-2 md:hidden">
             {parent?.href && (
@@ -71,10 +88,12 @@ export function PageHeader({
               </li>
             ))}
           </ol>
+
+          {inlineRight && <div className="shrink-0">{right}</div>}
         </nav>
       )}
 
-      {(title || right) && (
+      {(title || (right && !inlineRight)) && (
         <div className="mt-2 flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
             {title && (

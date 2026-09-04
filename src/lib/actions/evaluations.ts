@@ -1,6 +1,6 @@
 "use server";
 
-import { and, eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { canWrite, requireStaff } from "@/lib/auth/staff";
 import { db } from "@/lib/db";
 import {
@@ -8,8 +8,11 @@ import {
   blindPeeks,
   evaluationRevisions,
   evaluations,
+  lessonTestEvaluations,
+  lessonTestScores,
   subjectiveAnswers,
 } from "@/lib/db/schema";
+import { getLessonTestCriteria } from "@/lib/queries/lesson-tests";
 import { err, ok, type ActionResult } from "./result";
 import { revalidateCandidateScoreViews } from "./revalidate";
 
@@ -110,6 +113,144 @@ export async function saveEvaluation(
 
   revalidateCandidateScoreViews();
   return ok({ evaluationId, score: input.score, revisionCreated });
+}
+
+export type SaveLessonTestInput = {
+  applicationId: string;
+  /** Nota por critério, 0–10. Critério ausente do objeto NÃO é zero: é ausência. */
+  scores: Record<string, number>;
+  comment?: string | null;
+};
+
+export type SaveLessonTestResult = {
+  lessonTestEvaluationId: string;
+  /** Média dos critérios pontuados — é ela que alimenta a dimensão Aula-teste. */
+  average: number;
+  criteriaCount: number;
+};
+
+/**
+ * Avaliação de aula-teste por critérios.
+ *
+ * É a ÚNICA forma de lançar aula-teste, e não um detalhe da nota 0–10 que
+ * existia antes. A razão está em `assembleDimensionScores`: quando há critérios
+ * lançados, a média deles vence qualquer linha de `evaluations` para
+ * `aula_teste`. As duas formas conviveram por um tempo, e o resultado é que o
+ * campo 0–10 aceitava uma nota que o cálculo ignorava em silêncio — o banco
+ * tinha 18 aulas com critérios e zero linhas de `evaluations` para a dimensão.
+ *
+ * Por isso não se grava nada em `evaluations` aqui. A nota da dimensão é
+ * derivada, e derivá-la duas vezes é o que criava a divergência.
+ *
+ * Critério em branco fica FORA: a média é sobre o que foi observado. Entrar
+ * como zero faria "não deu tempo de ver a lousa" pesar igual a "a lousa estava
+ * ilegível".
+ */
+export async function saveLessonTest(
+  input: SaveLessonTestInput,
+): Promise<ActionResult<SaveLessonTestResult>> {
+  const staff = await requireStaff(["admin", "avaliador"]);
+  if (!canWrite(staff)) return err("sem_permissao");
+
+  const entries = Object.entries(input.scores);
+  if (entries.length === 0) return err("nota_invalida", "scores");
+
+  for (const [, score] of entries) {
+    if (!Number.isFinite(score)) return err("nota_invalida", "scores");
+    if (score < 0 || score > 10) return err("nota_fora_da_faixa", "scores");
+  }
+
+  // Os ids de critério vêm do cliente e vão direto para uma FK. Sem esta
+  // checagem, um id inexistente só falharia no INSERT — depois do DELETE, com
+  // a avaliação anterior já apagada.
+  const criteria = await getLessonTestCriteria();
+  const known = new Set(criteria.map((c) => c.id));
+  if (entries.some(([criterionId]) => !known.has(criterionId))) {
+    return err("dimensao_invalida", "scores");
+  }
+
+  const comment = input.comment?.trim() || null;
+
+  // A avaliação DESTE avaliador nesta candidatura, entre as lançadas pela
+  // interface. As importadas têm `external_ref` e não se reescrevem.
+  const [existing] = await db
+    .select({ id: lessonTestEvaluations.id })
+    .from(lessonTestEvaluations)
+    .where(
+      and(
+        eq(lessonTestEvaluations.applicationId, input.applicationId),
+        eq(lessonTestEvaluations.evaluatorStaffId, staff.id),
+        isNull(lessonTestEvaluations.externalRef),
+      ),
+    )
+    .limit(1);
+
+  let evaluationId: string;
+
+  const rows = entries.map(([criterionId, score]) => ({
+    criterionId,
+    score: String(score),
+  }));
+
+  if (existing) {
+    evaluationId = existing.id;
+    // Reescrita completa, e não upsert por critério: um critério que o
+    // avaliador APAGOU tem de sair da média, e um upsert o deixaria lá.
+    //
+    // Num `batch`, e não em awaits separados: o driver `neon-http` não tem
+    // transação, mas o batch vai num request só e o Neon o executa dentro de
+    // uma. Solto, um INSERT que falhasse deixaria a avaliação APAGADA — o
+    // avaliador veria "não foi enviada" e teria perdido a nota que já existia.
+    await db.batch([
+      db
+        .update(lessonTestEvaluations)
+        .set({ comment, evaluatedAt: new Date() })
+        .where(eq(lessonTestEvaluations.id, evaluationId)),
+      db
+        .delete(lessonTestScores)
+        .where(eq(lessonTestScores.lessonTestEvaluationId, evaluationId)),
+      db.insert(lessonTestScores).values(
+        rows.map((row) => ({ ...row, lessonTestEvaluationId: evaluationId })),
+      ),
+    ]);
+  } else {
+    const [created] = await db
+      .insert(lessonTestEvaluations)
+      .values({
+        applicationId: input.applicationId,
+        evaluatorStaffId: staff.id,
+        comment,
+        evaluatedAt: new Date(),
+      })
+      .returning({ id: lessonTestEvaluations.id });
+    evaluationId = created.id;
+
+    await db.insert(lessonTestScores).values(
+      rows.map((row) => ({ ...row, lessonTestEvaluationId: evaluationId })),
+    );
+  }
+
+  const average =
+    entries.reduce((sum, [, score]) => sum + score, 0) / entries.length;
+
+  await db.insert(auditEvents).values({
+    staffId: staff.id,
+    action: "lesson_test_saved",
+    entityType: "application",
+    entityId: input.applicationId,
+    metadata: {
+      criterios: entries.length,
+      media: Number(average.toFixed(3)),
+      edicao: Boolean(existing),
+    },
+  });
+
+  revalidateCandidateScoreViews();
+  return ok({
+    lessonTestEvaluationId: evaluationId,
+    average,
+    criteriaCount: entries.length,
+  });
 }
 
 /**

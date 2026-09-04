@@ -135,6 +135,33 @@ describe("scoring", () => {
     );
   });
 
+  // Esta é a razão pela qual a aula-teste se lança POR CRITÉRIOS e não por uma
+  // nota 0–10 na dimensão: existindo critérios, a média deles vence a linha de
+  // `evaluations`. O campo de nota única aceitava um número que o cálculo
+  // ignorava em silêncio. Se este teste inverter, o formulário de critérios
+  // deixa de ser a fonte da nota e a interface passa a mentir.
+  it("lesson-test average beats a live evaluation on aula_teste", () => {
+    const result = assembleDimensionScores({
+      dimensionCodes: ["aula_teste", "video"],
+      weights: { aula_teste: 0.5, video: 0.5 },
+      evals: [
+        {
+          dimensionCode: "aula_teste",
+          scoreRaw: 3,
+          scaleMax: 10,
+          evaluatorStaffId: "staff-1",
+          blindPeekedAt: null,
+        },
+      ],
+      imported: [],
+      lessonTestScore: 8.5,
+      forceReveal: true,
+    });
+    expect(
+      result.dimensionScores.find((d) => d.code === "aula_teste")?.score,
+    ).toBe(8.5);
+  });
+
   it("group score with 1/2 weights reproduces FINAL CONT exactly", () => {
     // A fórmula da planilha de 2025 vira configuração, não constante. Se este
     // teste quebrar, a nota histórica de 68 candidaturas mudou de significado.

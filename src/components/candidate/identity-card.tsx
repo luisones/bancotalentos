@@ -1,8 +1,13 @@
 import { Panel } from "@/components/liceu/surface";
+import { DistanceMap } from "@/components/liceu/distance-map";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { initialsOf } from "@/lib/format";
 import type { ProfileViewModel } from "@/lib/types/candidate-profile";
 import { cn } from "@/lib/utils";
-import { InstrumentBadges } from "./instrument-badges";
 import { QuickNoteEditor } from "./quick-note-editor";
 import { StatusControl } from "./status-control";
 import { WhatsAppIcon } from "@/components/liceu/icons";
@@ -10,10 +15,14 @@ import { WhatsAppIcon } from "@/components/liceu/icons";
 /**
  * Quem é, para o quê concorre, onde está e como se compara.
  *
- * Denso de propósito: nome, disciplina, status, posição, contato, instrumentos
- * aplicados, nota rápida, inglês e distância cabem acima da dobra. Os três
- * blocos de status antigos — situação seletiva, etapa operacional, selo de
- * talento — viraram uma tag só com estrela.
+ * Denso de propósito: nome, disciplina, status, posição, contato, nota rápida,
+ * inglês e distância cabem acima da dobra. Os três blocos de status antigos —
+ * situação seletiva, etapa operacional, selo de talento — viraram uma tag só
+ * com estrela.
+ *
+ * A fileira de pastilhas `AT · DO · DD · CD · CO · VD` saiu. Eram seis siglas
+ * de duas letras que ninguém decodifica, repetindo números que aparecem
+ * nomeados por extenso nos cartões de Resultado logo abaixo.
  */
 export function IdentityCard({ vm }: { vm: ProfileViewModel }) {
   const { identity: id, focused, viewer } = vm;
@@ -69,17 +78,16 @@ export function IdentityCard({ vm }: { vm: ProfileViewModel }) {
           </div>
 
           <div className="mt-3.5 flex flex-wrap items-center gap-x-5 gap-y-2">
-            <InstrumentBadges items={vm.instruments} />
             <Fact label="Inglês" value={id.englishLevel} />
-            <Fact
+            <DistanceFact
               label="Santo André"
               value={id.distances.santoAndre}
-              title={id.distances.note}
+              distances={id.distances}
             />
-            <Fact
+            <DistanceFact
               label="São Caetano"
               value={id.distances.saoCaetano}
-              title={id.distances.note}
+              distances={id.distances}
             />
           </div>
         </div>
@@ -114,6 +122,53 @@ export function IdentityCard({ vm }: { vm: ProfileViewModel }) {
         </div>
       </div>
     </Panel>
+  );
+}
+
+/**
+ * Distância que abre o mini-mapa.
+ *
+ * "18 km" responde "longe?" e não responde "longe para que lado?" — e a
+ * resposta importa quando a pessoa mora entre as duas unidades. Sem CEP não há
+ * nada a abrir, e o campo volta a ser um `Fact` inerte.
+ */
+function DistanceFact({
+  label,
+  value,
+  distances,
+}: {
+  label: string;
+  value: string | null;
+  distances: ProfileViewModel["identity"]["distances"];
+}) {
+  if (!value) return <Fact label={label} value={null} />;
+
+  return (
+    <Popover>
+      <PopoverTrigger
+        aria-label={`${label}: ${value}. Ver no mapa.`}
+        title={distances.note ?? undefined}
+        className="flex cursor-pointer items-baseline gap-1.5 rounded-chip px-1 -mx-1 hover:bg-gold-bg focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-gold-text"
+      >
+        <span className="text-micro uppercase tracking-micro text-label">
+          {label}
+        </span>
+        <span className="text-cell font-semibold text-ink">{value}</span>
+      </PopoverTrigger>
+      <PopoverContent align="start" className="w-[min(92vw,300px)]">
+        <p className="text-micro mb-2 uppercase tracking-micro text-label">
+          Moradia e unidades
+        </p>
+        <DistanceMap
+          lat={distances.lat}
+          lng={distances.lng}
+          kmSantoAndre={distances.kmSantoAndre}
+          kmSaoCaetano={distances.kmSaoCaetano}
+          mode={distances.mode}
+          precision={distances.precision}
+        />
+      </PopoverContent>
+    </Popover>
   );
 }
 

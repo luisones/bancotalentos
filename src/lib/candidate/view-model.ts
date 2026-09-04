@@ -1,5 +1,6 @@
 import { isAdmin, canWrite, type StaffUser } from "@/lib/auth/staff";
 import { shortCampaignName } from "@/lib/campaign-color";
+import { partShortLabel } from "@/lib/dimension-short";
 import { formatDate } from "@/lib/format";
 import {
   candidateStatusLabels,
@@ -20,8 +21,6 @@ import { formatScore } from "@/lib/scoring";
 import type { Tone } from "@/lib/tone";
 import type {
   AnswerView,
-  InstrumentBadge,
-  LessonTestView,
   OwnScore,
   Position,
   PracticeView,
@@ -29,9 +28,6 @@ import type {
   ScoreCard,
   ScorePart,
 } from "@/lib/types/candidate-profile";
-
-/** Ordem fixa da fileira de pastilhas e dos cartões. */
-const INSTRUMENT_ORDER = ["AT", "DO", "DD", "CD", "CO", "VD"];
 
 /**
  * Nota alta é positiva, nota baixa é alerta — e ausência é neutra, nunca
@@ -127,32 +123,14 @@ export function buildProfileViewModel({
     detail.dimensions.map((d) => [d.code, d]),
   );
 
-  // ── Pastilhas de instrumento ────────────────────────────────────────────
-  const instruments: InstrumentBadge[] = detail.dimensions
-    .filter((d) => d.active && d.shortCode)
-    .map((d) => {
-      const score = scores[d.code] ?? null;
-      return {
-        code: d.code,
-        shortCode: d.shortCode!,
-        name: labelFor(dimensionLabels, d.code),
-        score,
-        display: formatScore(score),
-        applied: score !== null,
-      };
-    })
-    .sort(
-      (a, b) =>
-        INSTRUMENT_ORDER.indexOf(a.shortCode) -
-        INSTRUMENT_ORDER.indexOf(b.shortCode),
-    );
-
   const partOf = (code: string): ScorePart => {
     const dim = dimensionByCode.get(code);
     const score = scores[code] ?? null;
     return {
       code,
-      shortCode: dim?.shortCode ?? "",
+      // `Obj.` / `Dis.`, e não o `DO`/`DD` do banco: dentro de um cartão que
+      // se chama "Didática", a parte só precisa dizer qual metade ela é.
+      shortCode: partShortLabel(code),
       label: labelFor(dimensionLabels, code),
       score,
       display: formatScore(score),
@@ -164,11 +142,7 @@ export function buildProfileViewModel({
     };
   };
 
-  const groupCard = (
-    groupCode: string,
-    memberCodes: string[],
-    emptyHint: string,
-  ): ScoreCard => {
+  const groupCard = (groupCode: string, memberCodes: string[]): ScoreCard => {
     const score = scores[groupCode] ?? null;
     return {
       code: groupCode,
@@ -181,7 +155,6 @@ export function buildProfileViewModel({
       dimensionId: null,
       own: null,
       hiddenPeers: 0,
-      emptyHint: score === null ? emptyHint : null,
     };
   };
 
@@ -202,19 +175,9 @@ export function buildProfileViewModel({
       dimensionId: lessonDim?.id ?? null,
       own: ownScoreOf(own, "aula_teste"),
       hiddenPeers: 0,
-      emptyHint:
-        lessonScore === null ? "Ninguém lançou nota de aula-teste." : null,
     },
-    groupCard(
-      "didatica",
-      ["didatica_objetiva", "didatica_dissertativa"],
-      "O candidato não respondeu ao formulário de didática.",
-    ),
-    groupCard(
-      "conteudo",
-      ["conteudo_dissertativa", "conteudo_objetiva"],
-      "Não fez prova de conteúdo.",
-    ),
+    groupCard("didatica", ["didatica_objetiva", "didatica_dissertativa"]),
+    groupCard("conteudo", ["conteudo_dissertativa", "conteudo_objetiva"]),
     {
       code: "video",
       label: "Vídeo",
@@ -226,28 +189,10 @@ export function buildProfileViewModel({
       dimensionId: videoDim?.id ?? null,
       own: ownScoreOf(own, "video"),
       hiddenPeers: 0,
-      emptyHint:
-        videoScore === null
-          ? "Sem nota. Lance junto ao link do vídeo."
-          : null,
     },
   ];
 
   // ── Detalhe dos cartões ────────────────────────────────────────────────
-  const lessonTests: LessonTestView[] = (
-    (appId && detail.lessonTestsByApp.get(appId)) ||
-    []
-  ).map((test) => ({
-    id: test.id,
-    evaluatorName: test.evaluatorName,
-    date: test.evaluatedAt ? formatDate(test.evaluatedAt) : null,
-    comment: test.comment,
-    criteria: test.criteria.map((c) => ({
-      name: c.name,
-      display: formatScore(c.score),
-    })),
-  }));
-
   const toPercent = (value: number | null, scaleMax: number) =>
     value === null || scaleMax <= 0 ? null : (value / scaleMax) * 100;
 
@@ -323,10 +268,14 @@ export function buildProfileViewModel({
         santoAndre: formatDistance(scored?.kmSantoAndre ?? null, approximate),
         saoCaetano: formatDistance(scored?.kmSaoCaetano ?? null, approximate),
         note: distanceNote(scored),
+        kmSantoAndre: scored?.kmSantoAndre ?? null,
+        kmSaoCaetano: scored?.kmSaoCaetano ?? null,
+        lat: scored?.lat ?? null,
+        lng: scored?.lng ?? null,
+        mode: scored?.distanceMode ?? null,
+        precision: scored?.distancePrecision ?? null,
       },
     },
-
-    instruments,
 
     scores: {
       consolidated: scored?.consolidated ?? null,
@@ -335,7 +284,6 @@ export function buildProfileViewModel({
       totalDimensions: scored?.totalDimensions ?? 0,
       blindPartial: false,
       cards,
-      lessonTests,
       answers,
       practices,
     },

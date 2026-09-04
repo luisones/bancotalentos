@@ -9,9 +9,6 @@ import {
   documents,
   evaluations,
   instruments,
-  lessonTestCriteria,
-  lessonTestEvaluations,
-  lessonTestScores,
   notes,
   staffUsers,
   subjectiveAnswers,
@@ -33,6 +30,11 @@ import { getAnswerScores, type AnswerScore } from "./answer-overrides";
  * auditoria. Nenhum deles aparece mais na página, e continuar carregando
  * oito tabelas para descartá-las era o custo invisível de um acordeão de dez
  * seções.
+ *
+ * A aula-teste também saiu — e ela custava DOIS acessos, porque os critérios
+ * dependem dos ids das avaliações e não caíam no `batch`. Agora a ficha vem de
+ * `/api/painel/[applicationId]` quando alguém a abre, que é o que a maioria das
+ * visitas nunca faz.
  */
 export type CandidateDetail = Awaited<ReturnType<typeof getCandidateDetail>>;
 
@@ -44,14 +46,6 @@ export type OwnEvaluation = {
   score: number;
   comment: string | null;
   updatedAt: Date;
-};
-
-export type LessonTestDetail = {
-  id: string;
-  evaluatorName: string;
-  evaluatedAt: Date | null;
-  comment: string | null;
-  criteria: Array<{ name: string; score: number }>;
 };
 
 export type AnswerDetail = AnswerScore & {
@@ -144,7 +138,6 @@ export async function getCandidateDetail(
         string,
         (typeof teachingPracticeScores.$inferSelect)[]
       >(),
-      lessonTestsByApp: new Map<string, LessonTestDetail[]>(),
       ownEvaluationsByApp: new Map<string, Map<string, OwnEvaluation>>(),
       notes: [] as Array<{ id: string; body: string; author: string; createdAt: Date }>,
       dimensions: await db.select().from(dimensions).orderBy(dimensions.sortOrder),
@@ -152,18 +145,10 @@ export async function getCandidateDetail(
   }
 
   const [
-    [
-      docs,
-      answerRows,
-      practices,
-      lessonEvals,
-      ownEvalRows,
-      noteRows,
-      allDimensions,
-    ],
+    [docs, answerRows, practices, ownEvalRows, noteRows, allDimensions],
     answerScores,
   ] = await Promise.all([
-    // Sete selects num HTTP: latência us-east-1 × 7 era o perfil "sempre lento".
+    // Seis selects num HTTP: latência us-east-1 × 6 era o perfil "sempre lento".
     db.batch([
       db
         .select()
@@ -185,20 +170,6 @@ export async function getCandidateDetail(
         .select()
         .from(teachingPracticeScores)
         .where(inArray(teachingPracticeScores.applicationId, applicationIds)),
-      db
-        .select({
-          id: lessonTestEvaluations.id,
-          applicationId: lessonTestEvaluations.applicationId,
-          evaluatedAt: lessonTestEvaluations.evaluatedAt,
-          comment: lessonTestEvaluations.comment,
-          evaluatorName: staffUsers.name,
-        })
-        .from(lessonTestEvaluations)
-        .leftJoin(
-          staffUsers,
-          eq(staffUsers.id, lessonTestEvaluations.evaluatorStaffId),
-        )
-        .where(inArray(lessonTestEvaluations.applicationId, applicationIds)),
       // Só as PRÓPRIAS avaliações: garante pelo tipo que a UI de edição nunca
       // recebe a nota de outro avaliador.
       db
@@ -235,44 +206,6 @@ export async function getCandidateDetail(
     ]),
     getAnswerScores(applicationIds),
   ]);
-
-  // Critérios da aula-teste, um nível abaixo das avaliações.
-  const lessonTestsByApp = new Map<string, LessonTestDetail[]>();
-  if (lessonEvals.length > 0) {
-    const criteriaRows = await db
-      .select({
-        evaluationId: lessonTestScores.lessonTestEvaluationId,
-        name: lessonTestCriteria.name,
-        sortOrder: lessonTestCriteria.sortOrder,
-        score: lessonTestScores.score,
-      })
-      .from(lessonTestScores)
-      .innerJoin(
-        lessonTestCriteria,
-        eq(lessonTestCriteria.id, lessonTestScores.criterionId),
-      )
-      .where(
-        inArray(
-          lessonTestScores.lessonTestEvaluationId,
-          lessonEvals.map((e) => e.id),
-        ),
-      );
-
-    const byEval = groupBy(criteriaRows, (r) => r.evaluationId);
-    for (const evaluation of lessonEvals) {
-      const list = lessonTestsByApp.get(evaluation.applicationId) ?? [];
-      list.push({
-        id: evaluation.id,
-        evaluatorName: evaluation.evaluatorName ?? "Avaliador não identificado",
-        evaluatedAt: evaluation.evaluatedAt,
-        comment: evaluation.comment,
-        criteria: (byEval.get(evaluation.id) ?? [])
-          .sort((a, b) => a.sortOrder - b.sortOrder)
-          .map((c) => ({ name: c.name, score: Number(c.score) })),
-      });
-      lessonTestsByApp.set(evaluation.applicationId, list);
-    }
-  }
 
   // As respostas casam com as notas do ensemble pelo id da resposta.
   const scoreByAnswerId = new Map<string, AnswerScore>();
@@ -322,7 +255,6 @@ export async function getCandidateDetail(
     documentsByApp: groupBy(docs, (d) => d.applicationId),
     answersByApp,
     practicesByApp: groupBy(practices, (p) => p.applicationId),
-    lessonTestsByApp,
     ownEvaluationsByApp,
     notes: noteRows.map((n) => ({
       ...n,

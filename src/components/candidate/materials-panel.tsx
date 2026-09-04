@@ -1,8 +1,6 @@
 import { MicroHeader, Panel } from "@/components/liceu/surface";
 import type { ProfileViewModel } from "@/lib/types/candidate-profile";
-import { cn } from "@/lib/utils";
 import { NoteWriter } from "./note-writer";
-import { ScoreInput } from "./score-input";
 
 /**
  * Currículo, vídeo e escrita, lado a lado.
@@ -11,6 +9,10 @@ import { ScoreInput } from "./score-input";
  * a observação. Antes o currículo estava numa seção do acordeão e a observação
  * atrás de um diálogo com duas abas, dois cliques e um scroll de distância — o
  * avaliador perdia o que tinha acabado de ver antes de conseguir registrar.
+ *
+ * A NOTA do vídeo não se lança mais aqui: ela vive no cartão Vídeo do
+ * Resultado, junto do número que ela muda. Estava nos dois lugares, com dois
+ * comentários explicando por que cada um era o lugar certo.
  *
  * Diferencial e Observação são textos do CANDIDATO, não da equipe. Ficam do
  * lado direito, encostados na caixa de escrita, porque é o que mais
@@ -42,52 +44,6 @@ export function MaterialsPanel({
             />
           </div>
 
-          {/* A nota do vídeo se lança AQUI, ao lado do link: é o momento em que
-              ela é formada. Numa seção de avaliação separada, o avaliador
-              perderia o vídeo de vista antes de conseguir registrar.
-
-              Fechada por padrão: os onze botões de 0 a 10 ocupam meia coluna, e
-              na maioria das visitas ninguém vai lançar nota nenhuma. */}
-          {viewer.canWrite && applicationId && materials.videoDimensionId ? (
-            <details className="group">
-              <summary className="text-cell flex cursor-pointer list-none items-baseline gap-2 hover:text-navy">
-                <span className="text-micro uppercase tracking-micro text-label">
-                  Nota do vídeo
-                </span>
-                <strong
-                  className={cn(
-                    "font-semibold tabular-nums",
-                    materials.videoScore === null && "text-faint",
-                  )}
-                >
-                  {materials.videoDisplay}
-                </strong>
-                <span className="text-meta font-semibold text-gold-text group-open:hidden">
-                  {materials.videoScore === null ? "avaliar" : "alterar"}
-                </span>
-              </summary>
-              <div className="mt-2">
-                <ScoreInput
-                  applicationId={applicationId}
-                  dimensionId={materials.videoDimensionId}
-                  dimensionName="Vídeo"
-                  own={materials.videoOwn}
-                />
-              </div>
-            </details>
-          ) : (
-            materials.videoScore !== null && (
-              <span className="text-cell flex items-baseline gap-2">
-                <span className="text-micro uppercase tracking-micro text-label">
-                  Nota do vídeo
-                </span>
-                <strong className="font-semibold tabular-nums">
-                  {materials.videoDisplay}
-                </strong>
-              </span>
-            )
-          )}
-
           <CandidateText
             title="Diferencial"
             body={materials.differential}
@@ -102,7 +58,17 @@ export function MaterialsPanel({
 
         <div className="bg-card px-4 py-3.5">
           <MicroHeader>Observações da equipe</MicroHeader>
-          {viewer.canWrite && <NoteWriter candidateId={vm.candidateId} />}
+          {/* `applicationId` vai junto no REGISTRO: a observação nasce olhando
+              uma candidatura, e `NoteWriter` já aceitava o campo — só não
+              recebia, então tudo gravava com `application_id` nulo. A leitura
+              continua por candidato, porque o histórico existente é todo nulo e
+              filtrar agora esconderia observação que hoje aparece. */}
+          {viewer.canWrite && (
+            <NoteWriter
+              candidateId={vm.candidateId}
+              applicationId={applicationId ?? undefined}
+            />
+          )}
 
           {notes.length === 0 ? (
             <p className="text-meta mt-2 text-subtle">

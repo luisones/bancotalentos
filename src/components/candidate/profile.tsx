@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import type { ProfileViewModel } from "@/lib/types/candidate-profile";
 import { ApplicationSwitcher } from "./application-switcher";
 import { IdentityCard } from "./identity-card";
+import { InterviewDialog } from "./interview-dialog";
 import { MaterialsPanel } from "./materials-panel";
 import { ScoresPanel } from "./scores-panel";
 
@@ -34,13 +35,21 @@ export function CandidateProfile({
 
   return (
     <div className="flex flex-col gap-4">
+      {/*
+        Cabeçalho numa faixa só.
+
+        `PageHeader` sem `title` agora põe `right` na linha do breadcrumb: o
+        nome do candidato é o h1 do cartão de identidade, então havia uma
+        segunda faixa existindo apenas para as ações — breadcrumb sozinho numa
+        linha, anterior/próximo e Imprimir noutra, antes do primeiro dado.
+      */}
       <PageHeader
         breadcrumb={[
           { label: "Painel", href: rankingQuery ? `/?${rankingQuery}` : "/" },
           { label: identity.name },
         ]}
         right={
-          <div className="flex items-center gap-4">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
             {(neighbors.prevId || neighbors.nextId) && (
               <nav
                 aria-label="Navegar no Painel"
@@ -68,6 +77,12 @@ export function CandidateProfile({
                 )}
               </nav>
             )}
+            <InterviewDialog
+              candidateId={candidateId}
+              applicationId={focused?.applicationId}
+              candidateName={identity.name}
+              canWrite={vm.viewer.canWrite}
+            />
             <Button size="sm" variant="outline" asChild>
               <Link href={`/candidatos/${candidateId}/impressao`}>
                 Imprimir…
@@ -86,7 +101,28 @@ export function CandidateProfile({
         extraQuery={rankingQuery}
       />
 
-      <ScoresPanel vm={vm} applicationId={focused?.applicationId ?? null} />
+      {/* Props explícitas, e não o `vm` inteiro: `ScoresPanel` é client, e
+          mandar o view model todo serializaria para o navegador as 19 práticas
+          e as observações da equipe, que quem renderiza são outros painéis. */}
+      <ScoresPanel
+        candidateId={candidateId}
+        candidateName={identity.name}
+        canWrite={vm.viewer.canWrite}
+        scores={{
+          consolidated: vm.scores.consolidated,
+          display: vm.scores.display,
+          coverage: vm.scores.coverage,
+          totalDimensions: vm.scores.totalDimensions,
+          cards: vm.scores.cards,
+          answers: vm.scores.answers,
+        }}
+        video={{
+          videoUrl: vm.materials.videoUrl,
+          videoDimensionId: vm.materials.videoDimensionId,
+          videoOwn: vm.materials.videoOwn,
+        }}
+        applicationId={focused?.applicationId ?? null}
+      />
 
       <MaterialsPanel vm={vm} applicationId={focused?.applicationId ?? null} />
     </div>

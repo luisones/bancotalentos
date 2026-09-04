@@ -31,17 +31,6 @@ export type OwnScore = {
   updatedAt: string;
 };
 
-/** Uma pastilha da fileira de instrumentos: acesa quando há nota. */
-export type InstrumentBadge = {
-  code: string;
-  /** `AT` `DO` `DD` `CD` `CO` `VD` */
-  shortCode: string;
-  name: string;
-  score: number | null;
-  display: string;
-  applied: boolean;
-};
-
 export type Position = {
   /** "2º de 12" */
   label: string;
@@ -52,6 +41,7 @@ export type Position = {
 /** Uma das quatro notas-folha, com o detalhe que o cartão abre. */
 export type ScorePart = {
   code: string;
+  /** `Obj.` | `Dis.` — o cartão já diz "Didática", a parte diz qual metade. */
   shortCode: string;
   label: string;
   score: number | null;
@@ -59,14 +49,6 @@ export type ScorePart = {
   positions: Position[];
   dimensionId: string;
   own: OwnScore | null;
-};
-
-export type LessonTestView = {
-  id: string;
-  evaluatorName: string;
-  date: string | null;
-  comment: string | null;
-  criteria: Array<{ name: string; display: string }>;
 };
 
 export type AnswerView = {
@@ -92,8 +74,11 @@ export type PracticeView = {
 /**
  * Um dos quatro cartões de nota.
  *
- * `kind` diz o que o cartão abre: os critérios da aula-teste, as 19 práticas,
- * as 4 respostas dissertativas, ou nada.
+ * Não há mais `emptyHint`. A ausência era dita em prosa — "Ninguém lançou nota
+ * de aula-teste.", "Só conteúdo objetiva." — e prosa é a forma mais lenta de
+ * ler um estado que a própria barra vazia e o rótulo em vermelho mostram de
+ * relance. Quatro cartões com uma frase embaixo de cada eram quatro parágrafos
+ * onde bastavam quatro barras.
  */
 export type ScoreCard = {
   code: string;
@@ -109,8 +94,6 @@ export type ScoreCard = {
   own: OwnScore | null;
   /** Quantas avaliações de colegas existem mas estão ocultas pela cegueira. */
   hiddenPeers: number;
-  /** Texto do estado vazio, quando não há nota nem forma de calcular. */
-  emptyHint: string | null;
 };
 
 export type ProfileViewModel = {
@@ -137,10 +120,15 @@ export type ProfileViewModel = {
       saoCaetano: string | null;
       /** Explica a aproximação, quando há. */
       note: string | null;
+      /** Números crus e coordenada, para o mini-mapa. */
+      kmSantoAndre: number | null;
+      kmSaoCaetano: number | null;
+      lat: number | null;
+      lng: number | null;
+      mode: string | null;
+      precision: string | null;
     };
   };
-
-  instruments: InstrumentBadge[];
 
   scores: {
     consolidated: number | null;
@@ -150,7 +138,6 @@ export type ProfileViewModel = {
     /** O consolidado exibido difere do real por causa da avaliação cega. */
     blindPartial: boolean;
     cards: ScoreCard[];
-    lessonTests: LessonTestView[];
     answers: AnswerView[];
     practices: PracticeView[];
   };

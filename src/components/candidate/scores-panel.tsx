@@ -1,173 +1,226 @@
+"use client";
+
+import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { MicroHeader, Panel } from "@/components/liceu/surface";
-import { toneFg } from "@/lib/tone";
+import { toneFg, toneSpine } from "@/lib/tone";
+import { documentHref } from "@/lib/candidate/document-url";
 import type { ProfileViewModel, ScoreCard } from "@/lib/types/candidate-profile";
 import { cn } from "@/lib/utils";
 import { AnswerScores } from "./answer-scores";
+import { LessonTestDialog } from "./lesson-test-dialog";
 import { ScoreInput } from "./score-input";
 
+/** Qual detalhe está aberto na faixa abaixo dos cartões. */
+type Expanded = "didatica" | "video" | null;
+
 /**
- * As quatro notas que decidem.
+ * O que este painel precisa do view model — e só isso.
  *
- * Em cima, o Resultado e os quatro números — é o que responde "este professor
- * presta?" sem rolar nada. Embaixo, a evidência de onde cada número veio, em
- * LARGURA TOTAL e fechada por padrão.
+ * Ele é um client component, então tudo que entra por prop viaja serializado
+ * para o navegador. Receber o `vm` inteiro mandava junto as 19 práticas
+ * declaradas e as observações da equipe, que quem renderiza são outros painéis
+ * (e o documento de impressão).
+ */
+export type ScoresPanelProps = {
+  candidateId: string;
+  candidateName: string;
+  canWrite: boolean;
+  scores: Pick<
+    ProfileViewModel["scores"],
+    "consolidated" | "display" | "coverage" | "totalDimensions" | "cards" | "answers"
+  >;
+  video: Pick<
+    ProfileViewModel["materials"],
+    "videoUrl" | "videoDimensionId" | "videoOwn"
+  >;
+  applicationId: string | null;
+};
+
+/**
+ * As quatro notas que decidem — e a forma de mexer em cada uma.
  *
- * A evidência não cabe dentro do cartão: as 4 respostas dissertativas e as 19
- * práticas numa coluna de 330px viram uma tira de texto ilegível. O cartão
- * resume; a seção embaixo desdobra.
+ * Antes o cartão só resumia e a evidência ficava em três faixas `<details>`
+ * abaixo: para lançar aula-teste eram dois cliques e um scroll, e o avaliador
+ * já tinha perdido de vista o número que ia mudar. Agora a ação está no cartão
+ * a que ela pertence, e o que não cabe num cartão de 300px — as respostas
+ * dissertativas, os onze botões de nota — abre numa faixa de largura total
+ * logo abaixo, sem sair da vista do número.
+ *
+ * A ausência não é mais dita em prosa. Havia uma frase embaixo de cada cartão
+ * — "Ninguém lançou nota de aula-teste.", "Só conteúdo objetiva." — quatro
+ * parágrafos para quatro estados que a barra vazia e o rótulo em vermelho
+ * mostram de relance.
  */
 export function ScoresPanel({
-  vm,
+  candidateId,
+  candidateName,
+  canWrite,
+  scores,
+  video,
   applicationId,
-}: {
-  vm: ProfileViewModel;
-  applicationId: string | null;
-}) {
-  const { scores, viewer } = vm;
-  const lessonCard = scores.cards.find((c) => c.code === "aula_teste");
+}: ScoresPanelProps) {
+  const router = useRouter();
+  const [expanded, setExpanded] = useState<Expanded>(null);
 
-  const hasEvidence =
-    scores.answers.length > 0 ||
-    scores.practices.length > 0 ||
-    scores.lessonTests.length > 0 ||
-    (viewer.canWrite && applicationId);
+  const onScoreSaved = () => router.refresh();
+  const toggle = (key: Exclude<Expanded, null>) =>
+    setExpanded((prev) => (prev === key ? null : key));
 
   return (
     <Panel padding="none">
-      <div className="flex flex-wrap items-end justify-between gap-x-8 gap-y-2 border-b border-rule px-[18px] py-3.5">
-        <div className="flex items-baseline gap-3">
-          <span
-            data-numeric
-            className={cn(
-              "font-heading text-metric font-bold tracking-[-0.02em]",
-              scores.consolidated === null ? "text-faint" : "text-navy",
-            )}
-          >
-            {scores.display}
-          </span>
-          <span className="text-dense text-ink-3">
-            Resultado sobre{" "}
-            <strong className="font-semibold">
-              {scores.coverage} de {scores.totalDimensions}
-            </strong>{" "}
-            itens
-          </span>
-        </div>
-        <p className="text-meta max-w-sm text-subtle">
-          O que não foi aplicado sai do cálculo em vez de entrar como zero. Os
-          pesos estão em Admin · Pesos.
-        </p>
+      <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 border-b border-rule px-[18px] py-3">
+        <span
+          data-numeric
+          className={cn(
+            "font-heading text-metric font-bold tracking-[-0.02em]",
+            scores.consolidated === null ? "text-faint" : "text-navy",
+          )}
+        >
+          {scores.display}
+        </span>
+        <span className="text-dense text-ink-3">
+          Resultado sobre{" "}
+          <strong className="font-semibold">
+            {scores.coverage} de {scores.totalDimensions}
+          </strong>{" "}
+          itens
+        </span>
       </div>
 
       <div className="grid gap-px bg-rule sm:grid-cols-2 xl:grid-cols-4">
         {scores.cards.map((card) => (
-          <SummaryCard key={card.code} card={card} />
+          <SummaryCard
+            key={card.code}
+            card={card}
+            candidateName={candidateName}
+            canWrite={canWrite}
+            answerCount={scores.answers.length}
+            video={video}
+            applicationId={applicationId}
+            expanded={expanded}
+            onToggle={toggle}
+            onScoreSaved={onScoreSaved}
+          />
         ))}
       </div>
 
-      {hasEvidence && (
-        <div className="border-t border-rule">
-          {scores.answers.length > 0 && (
-            <Evidence
-              label="Respostas dissertativas"
-              count={`${scores.answers.length} perguntas`}
-              hint="A nota da Didática dissertativa sai destas quatro."
-            >
-              <AnswerScores
-                candidateId={vm.candidateId}
-                answers={scores.answers}
-                canWrite={viewer.canWrite}
-              />
-            </Evidence>
-          )}
+      {expanded === "didatica" && (
+        <Band label="Respostas dissertativas" onClose={() => setExpanded(null)}>
+          <AnswerScores
+            candidateId={candidateId}
+            answers={scores.answers}
+            canWrite={canWrite}
+            onSaved={onScoreSaved}
+          />
+        </Band>
+      )}
 
-          {scores.practices.length > 0 && (
-            <Evidence
-              label="Práticas declaradas"
-              count={`${scores.practices.length} práticas`}
-              hint="Somadas com peso e direção, elas SÃO a Didática objetiva."
-            >
-              <Practices vm={vm} />
-            </Evidence>
-          )}
+      {expanded === "video" && applicationId && video.videoDimensionId && (
+        <Band label="Nota do vídeo" onClose={() => setExpanded(null)}>
+          <div className="max-w-[52ch]">
+            <ScoreInput
+              applicationId={applicationId}
+              dimensionId={video.videoDimensionId}
+              dimensionName="Vídeo"
+              own={video.videoOwn}
+              onSaved={() => {
+                setExpanded(null);
+                onScoreSaved();
+              }}
+            />
+          </div>
+        </Band>
+      )}
 
-          {(scores.lessonTests.length > 0 ||
-            (viewer.canWrite && applicationId && lessonCard?.dimensionId)) && (
-            <Evidence
-              label="Aula-teste"
-              count={
-                scores.lessonTests.length > 0
-                  ? `${scores.lessonTests.length} avaliação${scores.lessonTests.length === 1 ? "" : "ões"}`
-                  : "sem avaliação"
-              }
-              hint={
-                scores.lessonTests.length > 0
-                  ? "Critérios por avaliador."
-                  : "Ninguém lançou nota de aula-teste ainda."
-              }
-            >
-              <div className="flex flex-col gap-4">
-                {scores.lessonTests.map((test) => (
-                  <div key={test.id}>
-                    <p className="text-tag font-semibold text-navy">
-                      {test.evaluatorName}
-                      {test.date && (
-                        <span className="font-normal text-subtle">
-                          {" "}
-                          · {test.date}
-                        </span>
-                      )}
-                    </p>
-                    <ul className="mt-1 grid gap-x-6 sm:grid-cols-2 lg:grid-cols-3">
-                      {test.criteria.map((c) => (
-                        <li
-                          key={c.name}
-                          className="text-meta flex justify-between gap-2 border-b border-rule-weak py-0.5"
-                        >
-                          <span className="text-ink-3">{c.name}</span>
-                          <span className="font-semibold tabular-nums">
-                            {c.display}
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
-                    {test.comment && (
-                      <p className="text-meta mt-1 text-ink-3">{test.comment}</p>
-                    )}
-                  </div>
-                ))}
-                {viewer.canWrite && applicationId && lessonCard?.dimensionId && (
-                  <ScoreInput
-                    applicationId={applicationId}
-                    dimensionId={lessonCard.dimensionId}
-                    dimensionName="Aula-teste"
-                    own={lessonCard.own}
-                  />
-                )}
-              </div>
-            </Evidence>
-          )}
-        </div>
+      {!canWrite && (
+        <p className="text-meta border-t border-rule px-[18px] py-2 text-subtle">
+          Seu perfil é de consulta: as notas aparecem, mas não há o que lançar.
+        </p>
       )}
     </Panel>
   );
 }
 
+/** A faixa de detalhe: largura total, logo abaixo da fileira de cartões. */
+function Band({
+  label,
+  onClose,
+  children,
+}: {
+  label: string;
+  onClose: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="border-t border-rule px-[18px] py-3">
+      <div className="mb-1.5 flex items-baseline justify-between gap-3">
+        <MicroHeader className="mb-0 border-0 pb-0">{label}</MicroHeader>
+        <button
+          type="button"
+          onClick={onClose}
+          className="text-meta cursor-pointer text-subtle hover:underline"
+        >
+          fechar
+        </button>
+      </div>
+      {children}
+    </div>
+  );
+}
+
 /**
- * Um dos quatro números, sem detalhe embutido.
+ * Um dos quatro números, com a barra, as partes e a ação.
  *
- * A parte ausente aparece como `—` na linha de baixo e é dita em palavras logo
- * abaixo: é assim que "fez só a objetiva" fica legível sem uma nota de rodapé.
+ * A barra segue a gramática do `MeterBar`: trilho tracejado vazio quando não há
+ * nota, porque "sem avaliação" tem de ser visualmente diferente de "tirou
+ * zero". A parte ausente tem o rótulo em vermelho — é o que substituiu a frase
+ * "só conteúdo objetiva", e é lido sem terminar de ler.
  */
-function SummaryCard({ card }: { card: ScoreCard }) {
-  const missing = card.parts.filter((p) => p.score === null);
-  const present = card.parts.filter((p) => p.score !== null);
+function SummaryCard({
+  card,
+  candidateName,
+  canWrite,
+  answerCount,
+  video,
+  applicationId,
+  expanded,
+  onToggle,
+  onScoreSaved,
+}: {
+  card: ScoreCard;
+  candidateName: string;
+  canWrite: boolean;
+  answerCount: number;
+  video: ScoresPanelProps["video"];
+  applicationId: string | null;
+  expanded: Expanded;
+  onToggle: (key: Exclude<Expanded, null>) => void;
+  onScoreSaved: () => void;
+}) {
+  const pct =
+    card.score === null
+      ? 0
+      : Math.max(0, Math.min(100, (card.score / 10) * 100));
 
   return (
-    <section className="bg-card px-4 py-3.5">
-      <MicroHeader className="mb-2">{card.label}</MicroHeader>
+    <section className="flex flex-col gap-2 bg-card px-4 py-3">
+      <div className="flex items-baseline justify-between gap-2">
+        <MicroHeader className="mb-0 border-0 pb-0">{card.label}</MicroHeader>
+        <CardAction
+          card={card}
+          candidateName={candidateName}
+          canWrite={canWrite}
+          answerCount={answerCount}
+          video={video}
+          applicationId={applicationId}
+          expanded={expanded}
+          onToggle={onToggle}
+          onScoreSaved={onScoreSaved}
+        />
+      </div>
 
-      <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+      <div className="flex items-baseline gap-2.5">
         <span
           data-numeric
           className={cn(
@@ -177,99 +230,142 @@ function SummaryCard({ card }: { card: ScoreCard }) {
         >
           {card.display}
         </span>
-        {card.parts.length > 0 && (
-          <span className="text-meta inline-grid grid-cols-2 gap-x-3 tabular-nums">
-            {card.parts.map((part) => (
-              <span
-                key={part.code}
-                title={part.label}
-                className={cn(
-                  "whitespace-nowrap",
-                  part.score === null ? "text-faint" : "text-subtle",
-                )}
-              >
-                {part.shortCode} {part.display}
-              </span>
-            ))}
-          </span>
-        )}
+        <div className="relative mb-1 h-1.5 min-w-0 flex-1 overflow-hidden rounded-bar bg-ground">
+          {card.score === null ? (
+            <div className="h-full w-full border border-dashed border-rule-strong" />
+          ) : (
+            <div
+              className={cn("h-full rounded-bar", toneSpine[card.tone])}
+              style={{ width: `${pct}%` }}
+            />
+          )}
+        </div>
       </div>
 
-      <p className="text-meta mt-1.5 text-subtle">
-        {card.score === null
-          ? (card.emptyHint ?? "Não aplicado.")
-          : missing.length > 0 && present.length > 0
-            ? `Só ${present.map((p) => p.label.toLowerCase()).join(" e ")}.`
-            : ""}
-      </p>
+      {card.parts.length > 0 && (
+        <dl className="text-meta flex gap-x-4 tabular-nums">
+          {card.parts.map((part) => (
+            <div key={part.code} className="flex items-baseline gap-1">
+              <dt
+                title={part.label}
+                className={cn(
+                  // Rótulo em vermelho = esta metade não foi aplicada. É o que
+                  // era a frase "só conteúdo objetiva.", em duas letras.
+                  part.score === null
+                    ? "font-semibold text-alert"
+                    : "text-label",
+                )}
+              >
+                {part.shortCode}
+              </dt>
+              <dd
+                className={cn(
+                  part.score === null ? "text-faint" : "font-semibold text-ink",
+                )}
+              >
+                {part.display}
+              </dd>
+            </div>
+          ))}
+        </dl>
+      )}
     </section>
   );
 }
 
-/** Faixa de evidência: fechada por padrão, largura total quando aberta. */
-function Evidence({
-  label,
-  count,
-  hint,
-  children,
+/** O que se faz neste cartão, no próprio cartão. */
+function CardAction({
+  card,
+  candidateName,
+  canWrite,
+  answerCount,
+  video,
+  applicationId,
+  expanded,
+  onToggle,
+  onScoreSaved,
 }: {
-  label: string;
-  count: string;
-  hint: string;
-  children: React.ReactNode;
+  card: ScoreCard;
+  candidateName: string;
+  canWrite: boolean;
+  answerCount: number;
+  video: ScoresPanelProps["video"];
+  applicationId: string | null;
+  expanded: Expanded;
+  onToggle: (key: Exclude<Expanded, null>) => void;
+  onScoreSaved: () => void;
 }) {
-  return (
-    <details className="group border-b border-rule-weak last:border-b-0">
-      <summary className="flex cursor-pointer list-none flex-wrap items-baseline gap-x-2.5 px-[18px] py-2.5 hover:bg-row-hover">
-        <span
-          aria-hidden
-          className="text-meta w-3 shrink-0 text-gold-text transition-transform group-open:rotate-90"
-        >
-          ▸
-        </span>
-        <span className="text-cell font-semibold text-navy">{label}</span>
-        <span className="text-meta text-subtle">{count}</span>
-        <span className="text-meta text-subtle">— {hint}</span>
-      </summary>
-      <div className="px-[18px] pb-4 pt-1">{children}</div>
-    </details>
-  );
+  if (card.code === "aula_teste") {
+    if (!applicationId) return null;
+    return (
+      <LessonTestDialog
+        applicationId={applicationId}
+        candidateName={candidateName}
+        canWrite={canWrite}
+        onScoreSaved={onScoreSaved}
+        triggerClassName="text-meta cursor-pointer font-semibold text-gold-text hover:underline"
+        triggerLabel="Abrir a ficha de aula-teste"
+      >
+        {card.score === null ? (canWrite ? "avaliar" : "ver ficha") : "critérios"}
+      </LessonTestDialog>
+    );
+  }
+
+  if (card.code === "didatica") {
+    if (answerCount === 0) return null;
+    return (
+      <Toggle
+        active={expanded === "didatica"}
+        onClick={() => onToggle("didatica")}
+        idle="dissertativas"
+      />
+    );
+  }
+
+  if (card.code === "video") {
+    return (
+      <div className="flex items-baseline gap-2">
+        {video.videoUrl && applicationId && (
+          <a
+            href={documentHref(applicationId, "video")}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-meta font-semibold text-navy hover:text-gold-text hover:underline"
+          >
+            ver ↗
+          </a>
+        )}
+        {canWrite && applicationId && video.videoDimensionId && (
+          <Toggle
+            active={expanded === "video"}
+            onClick={() => onToggle("video")}
+            idle={card.score === null ? "avaliar" : "alterar"}
+          />
+        )}
+      </div>
+    );
+  }
+
+  return null;
 }
 
-/**
- * As 19 práticas declaradas, que somadas SÃO a didática objetiva.
- *
- * Oito delas contam ao contrário: marcar 5 em "Sermões" derruba a nota. A
- * direção fica escrita ao lado de cada uma, porque sem isso a lista parece uma
- * sequência de erros de sinal.
- */
-function Practices({ vm }: { vm: ProfileViewModel }) {
+function Toggle({
+  active,
+  onClick,
+  idle,
+}: {
+  active: boolean;
+  onClick: () => void;
+  idle: string;
+}) {
   return (
-    <ul className="grid gap-x-8 md:grid-cols-2 xl:grid-cols-3">
-      {vm.scores.practices.map((practice) => (
-        <li
-          key={practice.code}
-          className="flex items-baseline justify-between gap-3 border-b border-rule-weak py-1"
-        >
-          <span className="text-meta min-w-0 text-ink-3">
-            {practice.label}
-            {practice.direction && (
-              <span
-                title={practice.direction}
-                className={cn(
-                  "ml-1.5",
-                  practice.favorable ? "text-positive" : "text-alert",
-                )}
-              >
-                {practice.favorable ? "↑" : "↓"}
-              </span>
-            )}
-          </span>
-          <span className="text-meta shrink-0 font-semibold tabular-nums">
-            {practice.display}
-          </span>
-        </li>
-      ))}
-    </ul>
+    <button
+      type="button"
+      onClick={onClick}
+      aria-expanded={active}
+      className="text-meta cursor-pointer font-semibold text-gold-text hover:underline"
+    >
+      {active ? "fechar" : idle}
+    </button>
   );
 }

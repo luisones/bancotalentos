@@ -22,17 +22,12 @@ export type CepLocation = GeoPoint & {
 };
 
 /**
- * As duas unidades, resolvidas pela BrasilAPI em 2026-09-04 e fixadas aqui.
- * São dois pontos que não mudam: buscá-los de novo a cada execução do batch
- * seria uma chamada de rede para obter uma constante.
- *
- *   Santo André    09071-100  Rua Silveiras, Vila Guiomar
- *   São Caetano    09541-030  Rua Edmundo Monteiro, Santa Paula
+ * As duas unidades. Definidas em `./units` para o mini-mapa poder importá-las
+ * sem arrastar os clientes de BrasilAPI, Nominatim e OSRM para o bundle.
  */
-export const UNITS = {
-  santoAndre: { cep: "09071100", lat: -23.66389, lng: -46.53833 },
-  saoCaetano: { cep: "09541030", lat: -23.62306, lng: -46.55111 },
-} as const;
+import { UNITS } from "./units";
+
+export { UNITS };
 
 const BRASIL_API = "https://brasilapi.com.br/api/cep/v2";
 const NOMINATIM = "https://nominatim.openstreetmap.org/search";

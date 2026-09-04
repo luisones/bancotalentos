@@ -1,5 +1,5 @@
 import { PainelBoard } from "@/components/painel/painel-board";
-import { requireStaff } from "@/lib/auth/staff";
+import { canWrite, requireStaff } from "@/lib/auth/staff";
 import { campaignToneMap } from "@/lib/campaign-color";
 import {
   getAllRankingRows,
@@ -44,6 +44,7 @@ export default async function PainelPage({
       disciplines={disciplines}
       campaignTones={campaignTones}
       initialFilters={initialFilters}
+      canWrite={canWrite(staff)}
     />
   );
 }

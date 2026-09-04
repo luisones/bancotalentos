@@ -133,10 +133,47 @@ describe("filtro do Painel", () => {
 
   it("busca sem acento: matematica acha Matemática", () => {
     const rows = applyRankingFilters(bank, { search: "matematica" });
-    expect(rows.map((r) => r.candidateName)).toEqual([
-      "Ana Matemática",
-      "Carla Sem Nota",
-    ]);
+    expect(rows.map((r) => r.candidateName)).toEqual(["Ana Matemática"]);
+  });
+
+  // A busca é por NOME. Varria também disciplina e e-mail, e o efeito era que
+  // "mat" trazia os 63 candidatos de Matemática antes de qualquer Mateus — a
+  // disciplina já tem pílula de um clique ao lado.
+  it("busca ignora disciplina e e-mail", () => {
+    expect(
+      applyRankingFilters(bank, { search: "historia" }).map(
+        (r) => r.candidateName,
+      ),
+    ).toEqual(["Bruno História"]);
+
+    expect(applyRankingFilters(bank, { search: "ana@x.com" })).toEqual([]);
+  });
+
+  it("uma pílula de grupo traz as duas variantes de Português", () => {
+    const portugues = [
+      filterRow("Dora Texto", {
+        score: 8,
+        discipline: "portugues-producao-e-interpretacao-de-texto",
+      }),
+      filterRow("Elis Literatura", {
+        score: 6,
+        discipline: "portugues-literatura",
+      }),
+      filterRow("Fábio História", { score: 7, discipline: "historia" }),
+    ];
+
+    expect(
+      applyRankingFilters(portugues, { discipline: "grupo-portugues" }).map(
+        (r) => r.candidateName,
+      ),
+    ).toEqual(["Dora Texto", "Elis Literatura"]);
+
+    // Link antigo, com o slug de uma das variantes, passa a trazer o grupo.
+    expect(
+      applyRankingFilters(portugues, {
+        discipline: "portugues-literatura",
+      }).map((r) => r.candidateName),
+    ).toEqual(["Dora Texto", "Elis Literatura"]);
   });
 
   it("ordena por score com ausente no fim", () => {

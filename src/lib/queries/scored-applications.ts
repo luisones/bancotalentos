@@ -1,4 +1,5 @@
 import { cache } from "react";
+import { disciplineGroupSlug } from "@/lib/discipline-group";
 import {
   getCachedApplicationBase,
   getCachedScoringPayload,
@@ -38,6 +39,12 @@ export type ScoredApplication = {
   distanceMode: string | null;
   /** `rua` | `bairro` | `cidade` | null */
   distancePrecision: string | null;
+  /** Coordenada do CEP, para o mini-mapa. `null` quando não há CEP geocodificado. */
+  lat: number | null;
+  lng: number | null;
+  /** Há documento que abre. A URL fica no redirecionador, fora do payload. */
+  hasCurriculo: boolean;
+  hasVideo: boolean;
 
   consolidated: number | null;
   coverage: number;
@@ -102,6 +109,10 @@ export const getScoredApplications = cache(
         kmSaoCaetano: numberOrNull(row.kmSaoCaetano),
         distanceMode: row.distanceMode,
         distancePrecision: row.distancePrecision,
+        lat: numberOrNull(row.lat),
+        lng: numberOrNull(row.lng),
+        hasCurriculo: row.hasCurriculo,
+        hasVideo: row.hasVideo,
         consolidated: result?.consolidated ?? null,
         coverage: result?.coverage ?? 0,
         totalDimensions: result?.totalDimensions ?? 0,
@@ -138,6 +149,10 @@ export type DisciplinePositions = {
  * Candidatura sem consolidado fica FORA da contagem — ela não é a última, ela
  * ainda não tem posição. Contá-la inflaria o denominador e daria a quem foi
  * avaliado uma colocação melhor do que a real.
+ *
+ * A comparação é pelo GRUPO de disciplina (`discipline-group.ts`), não pela
+ * disciplina crua: as duas variantes de Português concorrem pelo mesmo tipo de
+ * vaga, e separá-las produzia "1º de 28" onde a realidade é "1º de 91".
  */
 export async function getDisciplinePositions(
   applicationId: string,
@@ -149,6 +164,8 @@ export async function getDisciplinePositions(
     return { campaign: null, bank: null };
   }
 
+  const targetGroup = disciplineGroupSlug(target.disciplineSlug);
+
   const rank = (pool: ScoredApplication[]): Position | null => {
     const scored = pool
       .filter((r) => r.consolidated !== null)
@@ -159,7 +176,7 @@ export async function getDisciplinePositions(
   };
 
   const sameDiscipline = rows.filter(
-    (r) => r.disciplineId === target.disciplineId,
+    (r) => disciplineGroupSlug(r.disciplineSlug) === targetGroup,
   );
 
   return {

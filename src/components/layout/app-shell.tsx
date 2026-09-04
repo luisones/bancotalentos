@@ -19,7 +19,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         data-print-hidden
         className="text-meta mx-auto w-full max-w-shell px-4 py-5 text-subtle md:px-6 xl:px-[30px]"
       >
-        Uso interno · contém dados pessoais de candidatos
+        Esta página contém informações confidenciais e estratégicas do Liceu
+        Jardim e dos candidatos. Não divulgue e não acesse em público.
       </footer>
     </div>
   );

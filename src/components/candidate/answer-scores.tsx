@@ -22,10 +22,19 @@ export function AnswerScores({
   candidateId,
   answers,
   canWrite,
+  onSaved,
 }: {
   candidateId: string;
   answers: AnswerView[];
   canWrite: boolean;
+  /**
+   * Avisa quem abriu esta lista de que um override entrou.
+   *
+   * A nota da Didática dissertativa é recalculada a partir das quatro, então
+   * quem mostra o número do grupo — o cartão do perfil, a célula do Painel —
+   * ficou desatualizado no instante em que uma destas mudou.
+   */
+  onSaved?: () => void;
 }) {
   return (
     // Medida limitada: em largura total a resposta vinha com ~180 caracteres
@@ -39,6 +48,7 @@ export function AnswerScores({
             candidateId={candidateId}
             answer={answer}
             canWrite={canWrite}
+            onSaved={onSaved}
           />
         ))}
       </div>
@@ -60,10 +70,12 @@ function AnswerRow({
   candidateId,
   answer,
   canWrite,
+  onSaved,
 }: {
   candidateId: string;
   answer: AnswerView;
   canWrite: boolean;
+  onSaved?: () => void;
 }) {
   const [override, setOverride] = useState(answer.overridePercent);
   const [draft, setDraft] = useState(
@@ -86,6 +98,7 @@ function AnswerRow({
       if (result.ok) {
         setOverride(percent);
         setEditing(false);
+        onSaved?.();
       } else {
         setError(result.code);
       }

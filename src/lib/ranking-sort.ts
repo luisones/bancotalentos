@@ -6,6 +6,8 @@
  * exatamente a que precisa de teste unitário barato.
  */
 
+import { disciplineGroupSlug } from "./discipline-group";
+
 /** Só o que a ordenação lê. `RankingRow` satisfaz este formato. */
 export type SortableRow = {
   candidateName: string;
@@ -123,6 +125,15 @@ export type RankingFilters = {
 /**
  * Filtra e ordena em memória — a mesma lógica no servidor (SSR/vizinhos) e no
  * cliente (clique no cabeçalho sem round-trip ao Neon).
+ *
+ * A busca é POR NOME. Antes varria nome + e-mail + disciplina, e o resultado é
+ * que digitar "mat" trazia os 63 candidatos de Matemática antes de qualquer
+ * pessoa chamada Mateus — o filtro de disciplina já é uma pílula de um clique
+ * ao lado, e fazer o campo de texto competir com ela só atrapalhava quem estava
+ * procurando uma pessoa.
+ *
+ * A disciplina compara pelo GRUPO (`discipline-group.ts`), então a pílula
+ * "Português" traz as duas variantes.
  */
 export function applyRankingFilters<
   T extends SortableRow & {
@@ -134,14 +145,15 @@ export function applyRankingFilters<
   const term = filters.search ? normalizeSearch(filters.search) : null;
   const filtered = rows.filter((row) => {
     if (filters.campaign && row.campaignSlug !== filters.campaign) return false;
-    if (filters.discipline && row.disciplineSlug !== filters.discipline) {
+    if (
+      filters.discipline &&
+      disciplineGroupSlug(row.disciplineSlug) !==
+        disciplineGroupSlug(filters.discipline)
+    ) {
       return false;
     }
     if (!term) return true;
-    const haystack = normalizeSearch(
-      [row.candidateName, row.email ?? "", row.disciplineName ?? ""].join(" "),
-    );
-    return haystack.includes(term);
+    return normalizeSearch(row.candidateName).includes(term);
   });
 
   const column = SORTERS[filters.sort ?? "score"] ?? SORTERS.score;
