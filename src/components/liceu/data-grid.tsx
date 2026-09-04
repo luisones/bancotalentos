@@ -15,6 +15,8 @@ export type GridColumn = {
    * coluna. Ausente = cabeçalho inerte.
    */
   sortKey?: string;
+  /** Nome completo quando o rótulo da coluna é abreviado. */
+  title?: string;
   /**
    * Some quando a linha empilha no celular. Com dez colunas, empilhar tudo
    * produz um bloco que ninguém lê — o registro no celular fica com o
@@ -43,6 +45,12 @@ const alignClass = {
   end: "text-right",
 } as const;
 
+const cellAlignClass = {
+  start: "text-left",
+  center: "flex w-full flex-col items-center text-center",
+  end: "text-right",
+} as const;
+
 /**
  * Tabela em CSS grid.
  *
@@ -63,6 +71,7 @@ export function DataGrid({
   empty,
   sort,
   stickyHeader,
+  compact,
   children,
   className,
 }: {
@@ -73,48 +82,71 @@ export function DataGrid({
   empty?: React.ReactNode;
   /** Ordenação por cabeçalho. Ausente = cabeçalhos inertes. */
   sort?: SortState;
-  /** Congela o cabeçalho abaixo do header do app durante a rolagem. */
-  stickyHeader?: boolean;
+  /**
+   * Congela o cabeçalho. `page` gruda abaixo do header do app (a página é o
+   * scrollport). `pane` gruda no topo de um painel com rolagem própria — o
+   * único jeito de a barra horizontal ficar visível sem o cabeçalho soltar
+   * das colunas. `true` = `page`.
+   */
+  stickyHeader?: boolean | "page" | "pane";
+  /** Trilhos e padding mais justos, para tabela operacional densa. */
+  compact?: boolean;
   children?: React.ReactNode;
   className?: string;
 }) {
   const cols = columns.map((c) => c.width).join(" ");
   const hasRows = Boolean(children);
+  const sticky =
+    stickyHeader === true || stickyHeader === "page"
+      ? "page"
+      : stickyHeader === "pane"
+        ? "pane"
+        : null;
 
   return (
     <div
       style={{
         ["--dg-cols" as string]: cols,
+        ["--dg-gap" as string]: compact ? "0.5rem" : "0.75rem",
+        ["--dg-pad-x" as string]: compact ? "0.5rem" : "0.75rem",
         ...(minWidth ? { ["--dg-min" as string]: `${minWidth}px` } : {}),
       }}
-      className={className}
+      className={cn(
+        sticky === "pane" && "md:flex md:min-h-0 md:flex-1 md:flex-col",
+        className,
+      )}
     >
       {caption && (
         <p className="text-tag mb-2.5 text-subtle">{caption}</p>
       )}
       {/*
-        NÃO há contêiner de rolagem aqui de propósito.
+        Pane: a tabela É o scrollport, nas duas direções. Sem altura definida
+        no ancestral, `overflow-x: auto` promove overflow-y a auto e o
+        cabeçalho sticky ancora num contêiner da altura da lista inteira —
+        some da vista ou cobre a primeira linha. O Painel dá essa altura
+        (flex-1 num bloco que cabe na janela); a barra de lado fica no
+        rodapé visível e o cabeçalho gruda no topo deste painel.
 
-        Qualquer elemento com overflow vira scrollport, e um cabeçalho `sticky`
-        gruda no scrollport mais próximo. Envolver a tabela num
-        `overflow-x-auto` fazia o cabeçalho ancorar naquele contêiner de
-        39.000px e aparecer no meio da lista, cobrindo a primeira linha.
-
-        Sem o wrapper, o cabeçalho gruda logo abaixo do header do app e a
-        página rola normalmente. Em telas estreitas a linha empilha e vira
-        registro (max-md); na faixa entre isso e a largura total, quem rola na
-        horizontal é a página — que é o comportamento que o navegador já sabe
-        fazer bem.
+        Page: sem wrapper de overflow. O cabeçalho gruda no viewport. Só
+        serve quando as colunas cabem; se não cabem, a página não ganha
+        barra horizontal (o overflow não alarga o documento).
       */}
-      <div>
+      <div
+        className={cn(
+          minWidth && "min-w-0",
+          sticky === "pane" &&
+            "max-md:overflow-visible md:min-h-0 md:flex-1 md:overflow-auto md:overscroll-contain",
+          minWidth && sticky !== "pane" && "overflow-x-auto",
+        )}
+      >
         <div className={minWidth ? "min-w-[var(--dg-min)]" : undefined}>
           <div
             className={cn(
-              "grid gap-3 border-b border-rule-strong px-3 pb-2 [grid-template-columns:var(--dg-cols)] max-md:hidden",
-              // Opaco e com sombra: transparente, as linhas passariam por
-              // baixo sem que se percebesse que o cabeçalho está fixo.
-              stickyHeader &&
+              "grid items-end border-b border-rule-strong pb-2 [grid-template-columns:var(--dg-cols)] [gap:var(--dg-gap,0.75rem)] [padding-inline:var(--dg-pad-x,0.75rem)] max-md:hidden",
+              sticky === "page" &&
                 "sticky top-header z-10 bg-card pt-2 shadow-[0_6px_10px_-8px_rgba(11,48,83,0.35)]",
+              sticky === "pane" &&
+                "sticky top-0 z-10 bg-card pt-2 shadow-[0_6px_10px_-8px_rgba(11,48,83,0.35)]",
             )}
           >
             {columns.map((c) => (
@@ -142,12 +174,17 @@ function HeaderCell({
   sort?: SortState;
 }) {
   const base = cn(
-    "font-heading text-micro font-bold uppercase tracking-micro text-label",
+    "font-heading text-micro font-bold uppercase leading-tight tracking-micro text-label",
     alignClass[column.align ?? "start"],
   );
+  const title = column.title;
 
   if (!sort || !column.sortKey) {
-    return <div className={base}>{column.label}</div>;
+    return (
+      <div className={base} title={title}>
+        {column.label}
+      </div>
+    );
   }
 
   const active = sort.key === column.sortKey;
@@ -161,15 +198,16 @@ function HeaderCell({
     // `justify-end` alinhava o texto dentro da própria caixa e não na coluna.
     // O efeito era o cabeçalho de toda coluna numérica desencontrado do número
     // que ele nomeia — de longe o defeito visual mais visível da tabela.
-    "flex w-full items-center gap-1 hover:text-navy",
+    "flex w-full flex-wrap items-end gap-x-0.5 gap-y-0 hover:text-navy",
     column.align === "end" && "justify-end",
     column.align === "center" && "justify-center",
+    column.align !== "end" && column.align !== "center" && "justify-start",
     active && "text-navy",
   );
   const label = (
     <>
       {column.label}
-      <span aria-hidden className={active ? "text-gold-text" : "opacity-0"}>
+      <span aria-hidden className={active ? "text-gold-text" : "hidden"}>
         {sort.order === "asc" ? "▲" : "▼"}
       </span>
       <span className="sr-only">
@@ -184,6 +222,7 @@ function HeaderCell({
     return (
       <button
         type="button"
+        title={title}
         onClick={() => sort.onSort!(column.sortKey!, nextOrder)}
         className={cn(className, "cursor-pointer border-0 bg-transparent p-0")}
       >
@@ -194,7 +233,7 @@ function HeaderCell({
 
   const href = sort.hrefFor?.(column.sortKey, nextOrder) ?? "#";
   return (
-    <a href={href} className={className}>
+    <a href={href} className={className} title={title}>
       {label}
     </a>
   );
@@ -251,7 +290,7 @@ export function DataGridRow({
   );
 
   const base = cn(
-    "relative grid items-center gap-3 border-b border-rule-weak px-3 py-row-y",
+    "relative grid items-center border-b border-rule-weak py-row-y [gap:var(--dg-gap,0.75rem)] [padding-inline:var(--dg-pad-x,0.75rem)]",
     "[grid-template-columns:var(--dg-cols)]",
     // Abaixo do limiar do container a linha empilha e vira um registro. Com
     // `stacked` quem empilha é o próprio consumidor: a linha só vira bloco.
@@ -304,7 +343,7 @@ export function Cell({
       {...(numeric ? { "data-numeric": true } : {})}
       className={cn(
         "text-cell min-w-0",
-        alignClass[align],
+        cellAlignClass[align],
         !interactive && "max-md:!text-left",
         hideOnStack && "max-md:hidden",
         muted && "text-muted-foreground",

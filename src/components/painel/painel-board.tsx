@@ -33,24 +33,40 @@ import {
 import { PainelFilters, type FilterOption } from "./painel-filters";
 
 /*
-  Doze colunas. As duas novas — Currículo e o lápis da nota rápida — custam
-  largura, então as demais foram enxugadas ao que o cabeçalho realmente ocupa:
-  a tabela cabe em ~1.320px, dentro do trilho de 1.560 do shell. Abaixo disso
-  quem rola na horizontal é a página, e no celular a linha vira card.
+  Colunas justas ao conteúdo, alinhadas ao centro. A nota rápida vem logo
+  depois do Resultado — é o comentário da equipe sobre aquele número. O
+  minWidth (~1.080px) é o piso do scroll horizontal no painel, não um
+  alvo de tela cheia.
 */
 const COLUMNS = [
-  { key: "cand", label: "Candidato", width: "minmax(196px,1.4fr)", sortKey: "name" },
-  { key: "score", label: "Resultado", width: "104px", align: "end" as const, numeric: true, sortKey: "score" },
-  { key: "at", label: "Aula-teste", width: "88px", align: "end" as const, numeric: true, sortKey: "aula_teste" },
-  { key: "did", label: "Didática", width: "108px", align: "end" as const, numeric: true, sortKey: "didatica" },
-  { key: "cont", label: "Conteúdo", width: "108px", align: "end" as const, numeric: true, sortKey: "conteudo" },
-  { key: "vid", label: "Vídeo", width: "76px", align: "end" as const, numeric: true, sortKey: "video" },
-  { key: "cv", label: "Currículo", width: "72px", align: "end" as const },
-  { key: "eng", label: "Inglês", width: "76px", sortKey: "ingles" },
-  { key: "sa", label: "Santo André", width: "96px", align: "end" as const, numeric: true, sortKey: "santo_andre" },
-  { key: "scs", label: "São Caetano", width: "96px", align: "end" as const, numeric: true, sortKey: "sao_caetano" },
-  { key: "status", label: "Status", width: "116px", align: "end" as const, sortKey: "status" },
-  { key: "note", label: "Nota", width: "28px", align: "end" as const },
+  { key: "cand", label: "Candidato", width: "minmax(168px,1.15fr)", sortKey: "name" },
+  { key: "score", label: "Resultado", width: "72px", align: "center" as const, numeric: true, sortKey: "score" },
+  { key: "note", label: "Nota", width: "36px", align: "center" as const },
+  { key: "at", label: "Aula-teste", width: "72px", align: "center" as const, numeric: true, sortKey: "aula_teste" },
+  { key: "did", label: "Didática", width: "88px", align: "center" as const, numeric: true, sortKey: "didatica" },
+  { key: "cont", label: "Conteúdo", width: "88px", align: "center" as const, numeric: true, sortKey: "conteudo" },
+  { key: "vid", label: "Vídeo", width: "64px", align: "center" as const, numeric: true, sortKey: "video" },
+  { key: "cv", label: "Currículo", width: "64px", align: "center" as const },
+  { key: "eng", label: "Inglês", width: "44px", align: "center" as const, sortKey: "ingles" },
+  {
+    key: "sa",
+    label: "S. André",
+    title: "Santo André",
+    width: "64px",
+    align: "center" as const,
+    numeric: true,
+    sortKey: "santo_andre",
+  },
+  {
+    key: "scs",
+    label: "S. Caetano",
+    title: "São Caetano",
+    width: "72px",
+    align: "center" as const,
+    numeric: true,
+    sortKey: "sao_caetano",
+  },
+  { key: "status", label: "Status", width: "7.5rem", align: "center" as const, sortKey: "status" },
 ];
 
 function filtersFromSearch(search: string): RankingFilters {
@@ -229,37 +245,44 @@ export function PainelBoard({
   const onScoreSaved = useCallback(() => router.refresh(), [router]);
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-3 md:h-[calc(100dvh-var(--spacing-header)-7.5rem)]">
       <PageHeader
+        className="shrink-0 py-3"
         breadcrumb={[]}
         title="Painel"
         sub={`${visible.length} candidatura${visible.length === 1 ? "" : "s"} — clique no cabeçalho de qualquer coluna para reordenar`}
       />
 
-      <PainelFilters
-        campaigns={campaigns}
-        disciplines={disciplines}
-        campaignTones={campaignTones}
-        active={filters}
-        onChange={patchFilters}
-      />
+      <div className="shrink-0">
+        <PainelFilters
+          campaigns={campaigns}
+          disciplines={disciplines}
+          campaignTones={campaignTones}
+          active={filters}
+          onChange={patchFilters}
+        />
+      </div>
 
-      <div className="rounded-panel border border-rule-strong bg-card p-2">
-        <DataGrid
-          columns={COLUMNS}
-          stickyHeader
-          sort={{
-            key: filters.sort ?? "score",
-            order: (filters.order as "asc" | "desc") ?? "desc",
-            onSort: (key, order) => patchFilters({ sort: key, order }),
-          }}
-          empty={
-            <EmptyState
-              title="Nenhuma candidatura encontrada."
-              hint="Nenhum registro atende aos filtros atuais. Remova um filtro para ampliar a busca."
-            />
-          }
-        >
+      <div className="min-h-0 min-w-0 flex-1 max-md:flex-none">
+        <div className="flex h-full min-h-0 min-w-0 flex-col rounded-panel border border-rule-strong bg-card p-2 max-md:h-auto">
+          <DataGrid
+            columns={COLUMNS}
+            minWidth={1080}
+            compact
+            stickyHeader="pane"
+            className="min-h-0 flex-1"
+            sort={{
+              key: filters.sort ?? "score",
+              order: (filters.order as "asc" | "desc") ?? "desc",
+              onSort: (key, order) => patchFilters({ sort: key, order }),
+            }}
+            empty={
+              <EmptyState
+                title="Nenhuma candidatura encontrada."
+                hint="Nenhum registro atende aos filtros atuais. Remova um filtro para ampliar a busca."
+              />
+            }
+          >
           {visible.length > 0
             ? visible.map((row) => (
                 <PainelRow
@@ -285,9 +308,10 @@ export function PainelBoard({
               ))
             : null}
         </DataGrid>
+        </div>
       </div>
 
-      <p className="text-meta text-subtle">
+      <p className="text-meta shrink-0 text-subtle">
         O Resultado pondera Didática, Conteúdo, Aula-teste e Vídeo, e o número ao
         lado dele diz sobre quantos dos quatro ele foi calculado — dimensão
         ausente não conta como zero.
@@ -419,7 +443,7 @@ function PainelRow({
           <QuickNoteLineButton note={row.quickNote} />
         </Cell>,
 
-        <Cell key="score" align="end">
+        <Cell key="score" align="center">
           <Link href={href} className="hover:underline">
             <ScoreWithCoverage
               size="cell"
@@ -430,11 +454,15 @@ function PainelRow({
           </Link>
         </Cell>,
 
-        <Cell key="at" align="end" numeric interactive>
+        <Cell key="note" align="center" interactive>
+          {quickNoteEditor}
+        </Cell>,
+
+        <Cell key="at" align="center" numeric interactive>
           {lessonTest}
         </Cell>,
 
-        <Cell key="did" align="end" numeric interactive>
+        <Cell key="did" align="center" numeric interactive>
           <DidaticaCell
             applicationId={row.applicationId}
             candidateId={row.candidateId}
@@ -445,7 +473,7 @@ function PainelRow({
           />
         </Cell>,
 
-        <Cell key="cont" align="end" numeric>
+        <Cell key="cont" align="center" numeric>
           <Link href={href}>
             <GroupScoreValue
               value={row.scores.conteudo ?? null}
@@ -454,24 +482,24 @@ function PainelRow({
           </Link>
         </Cell>,
 
-        <Cell key="vid" align="end" numeric interactive>
+        <Cell key="vid" align="center" numeric interactive>
           {video}
         </Cell>,
 
-        <Cell key="cv" align="end" interactive>
+        <Cell key="cv" align="center" interactive>
           <CurriculoCell
             applicationId={row.applicationId}
             hasCurriculo={row.hasCurriculo}
           />
         </Cell>,
 
-        <Cell key="eng">
+        <Cell key="eng" align="center">
           <Link href={href}>
             <EnglishLevel level={row.englishLevel} />
           </Link>
         </Cell>,
 
-        <Cell key="sa" align="end" numeric interactive>
+        <Cell key="sa" align="center" numeric interactive>
           <DistanceCell
             km={row.kmSantoAndre}
             lat={row.lat}
@@ -483,7 +511,7 @@ function PainelRow({
           />
         </Cell>,
 
-        <Cell key="scs" align="end" numeric interactive>
+        <Cell key="scs" align="center" numeric interactive>
           <DistanceCell
             km={row.kmSaoCaetano}
             lat={row.lat}
@@ -495,12 +523,8 @@ function PainelRow({
           />
         </Cell>,
 
-        <Cell key="status" align="end" interactive>
+        <Cell key="status" align="center" interactive>
           {status}
-        </Cell>,
-
-        <Cell key="note" align="end" interactive>
-          {quickNoteEditor}
         </Cell>,
       ]}
     />
@@ -713,19 +737,22 @@ function EnglishLevel({ level }: { level: string | null }) {
   if (!rank) return <span className="text-faint">—</span>;
 
   return (
-    <span className="inline-flex items-center gap-1.5" title={level ?? undefined}>
+    <span
+      className="inline-flex items-center"
+      title={level ?? undefined}
+      aria-label={`Inglês ${level}`}
+    >
       <span aria-hidden className="flex gap-0.5">
         {Array.from({ length: ENGLISH_STEPS }, (_, i) => (
           <span
             key={i}
             className={cn(
-              "h-3 w-1 rounded-bar",
-              i < rank ? "bg-navy" : "bg-ground",
+              "h-3.5 w-1 rounded-bar",
+              i < rank ? "bg-navy" : "bg-rule-strong",
             )}
           />
         ))}
       </span>
-      <span className="text-meta text-ink-3">{level?.trim().slice(0, 5)}</span>
     </span>
   );
 }

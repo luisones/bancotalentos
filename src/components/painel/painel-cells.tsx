@@ -1,5 +1,6 @@
 "use client";
 
+import { FileText, Video } from "lucide-react";
 import { useState, useTransition } from "react";
 import { StateBadge } from "@/components/liceu/chip";
 import { DistanceMap } from "@/components/liceu/distance-map";
@@ -89,22 +90,22 @@ export function GroupScoreValue({
   parts: Array<[string, number | null]>;
 }) {
   return (
-    <span className="block text-right">
+    <span className="flex flex-col items-center">
       <span
         className={cn(
-          "text-row block font-semibold",
+          "text-row font-semibold",
           value === null ? "text-faint" : "text-ink",
         )}
       >
         {formatScore(value)}
       </span>
-      <span className="text-micro inline-grid grid-cols-2 gap-x-2 tabular-nums">
+      <span className="text-micro flex flex-wrap justify-center gap-x-1.5 tabular-nums">
         {parts.map(([code, part]) => (
           <span
             key={code}
             title={partLongLabel(code)}
             className={cn(
-              "whitespace-nowrap text-right",
+              "whitespace-nowrap",
               part === null ? "text-faint" : "text-subtle",
             )}
           >
@@ -162,7 +163,7 @@ export function StatusCell({
       >
         {badge}
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-auto min-w-56">
+      <DropdownMenuContent align="center" className="w-auto min-w-56">
         <DropdownMenuLabel className="text-micro uppercase tracking-micro text-label">
           Status da candidatura
         </DropdownMenuLabel>
@@ -271,11 +272,11 @@ export function DidaticaCell({
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger
         aria-label={`Didática ${formatScore(score)}. Ver as respostas dissertativas.`}
-        className={cn(CELL_TRIGGER, "block w-full text-right")}
+        className={cn(CELL_TRIGGER, "block w-full text-center")}
       >
         <GroupScoreValue value={score} parts={parts} />
       </PopoverTrigger>
-      <PopoverContent align="end" className="w-[min(92vw,640px)]">
+      <PopoverContent align="center" className="w-[min(92vw,640px)]">
         <p className="text-micro mb-2 uppercase tracking-micro text-label">
           Didática dissertativa
         </p>
@@ -307,8 +308,11 @@ export function DidaticaCell({
 // ── Vídeo ─────────────────────────────────────────────────────────────────
 
 /**
- * Vídeo: sem nota, a célula É o link — porque a única coisa a fazer é assistir.
- * Com nota, abre o vídeo e a nota lado a lado.
+ * Vídeo: a nota, quando existe, e o ícone sempre que há arquivo para abrir.
+ *
+ * Sem nota, o ícone É o caminho — assistir vem antes de avaliar. Com nota, o
+ * número abre o lançamento e o ícone continua ali, senão some o sinal de que
+ * o vídeo existe.
  */
 export function VideoCell({
   applicationId,
@@ -323,48 +327,49 @@ export function VideoCell({
   canWrite: boolean;
   onScoreSaved: () => void;
 }) {
-  // Consulta e sem nota: nada a resolver aqui além de assistir.
-  if (!canWrite) {
-    if (score !== null) return <ScoreValue value={score} />;
-    return hasVideo ? (
-      <VideoLink applicationId={applicationId} />
-    ) : (
-      <ScoreValue value={null} />
-    );
-  }
+  const scoreNode =
+    score !== null || !hasVideo ? <ScoreValue value={score} /> : null;
 
-  if (score === null && hasVideo) {
-    // Sem nota, com vídeo: o caminho é assistir. O link é o principal e a nota
-    // fica ao lado — perguntar "quer avaliar?" antes de ver é a ordem errada.
-    //
-    // "nota" só aparece na linha sob o cursor (`group` vem da linha). Visível
-    // em todas, eram 707 pares de links empilhados numa coluna de 76px: a
-    // coluna virava ruído justamente enquanto se varre a lista, que é quando
-    // ninguém está avaliando nada. O foco por teclado também a revela.
-    return (
-      <span className="inline-flex items-baseline gap-1.5">
-        <VideoLink applicationId={applicationId} />
-        <VideoScorePopover
-          applicationId={applicationId}
-          hasVideo
-          onScoreSaved={onScoreSaved}
-          trigger={
-            <span className="text-meta font-semibold text-gold-text opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 max-md:opacity-100">
-              nota
-            </span>
-          }
-        />
-      </span>
+  const scoreTrigger =
+    canWrite && scoreNode ? (
+      <VideoScorePopover
+        applicationId={applicationId}
+        hasVideo={hasVideo}
+        onScoreSaved={onScoreSaved}
+        trigger={scoreNode}
+      />
+    ) : (
+      scoreNode
     );
+
+  const videoLink = hasVideo ? (
+    <VideoLink applicationId={applicationId} />
+  ) : null;
+
+  const gradeHint =
+    canWrite && score === null && hasVideo ? (
+      <VideoScorePopover
+        applicationId={applicationId}
+        hasVideo
+        onScoreSaved={onScoreSaved}
+        trigger={
+          <span className="text-meta font-semibold text-gold-text opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 max-md:opacity-100">
+            nota
+          </span>
+        }
+      />
+    ) : null;
+
+  if (!scoreTrigger && !videoLink) {
+    return <ScoreValue value={null} />;
   }
 
   return (
-    <VideoScorePopover
-      applicationId={applicationId}
-      hasVideo={hasVideo}
-      onScoreSaved={onScoreSaved}
-      trigger={<ScoreValue value={score} />}
-    />
+    <span className="inline-flex items-center justify-center gap-1">
+      {scoreTrigger}
+      {videoLink}
+      {gradeHint}
+    </span>
   );
 }
 
@@ -374,9 +379,11 @@ function VideoLink({ applicationId }: { applicationId: string }) {
       href={documentHref(applicationId, "video")}
       target="_blank"
       rel="noopener noreferrer"
-      className="text-cell font-semibold text-navy hover:text-gold-text hover:underline"
+      title="Abrir vídeo"
+      aria-label="Abrir vídeo"
+      className="inline-flex rounded-chip p-0.5 text-navy hover:bg-gold-bg hover:text-gold-text"
     >
-      ver ↗
+      <Video className="size-3.5" strokeWidth={1.75} aria-hidden />
     </a>
   );
 }
@@ -400,7 +407,7 @@ function VideoScorePopover({
       <PopoverTrigger aria-label="Vídeo: ver e avaliar" className={CELL_TRIGGER}>
         {trigger}
       </PopoverTrigger>
-      <PopoverContent align="end" className="w-[min(92vw,380px)]">
+      <PopoverContent align="center" className="w-[min(92vw,380px)]">
         <div className="mb-2 flex items-baseline justify-between gap-3">
           <p className="text-micro uppercase tracking-micro text-label">
             Vídeo
@@ -460,9 +467,11 @@ export function CurriculoCell({
       href={documentHref(applicationId, "curriculo")}
       target="_blank"
       rel="noopener noreferrer"
-      className="text-cell font-semibold text-navy hover:text-gold-text hover:underline"
+      title="Abrir currículo"
+      aria-label="Abrir currículo"
+      className="inline-flex rounded-chip p-0.5 text-navy hover:bg-gold-bg hover:text-gold-text"
     >
-      abrir ↗
+      <FileText className="size-3.5" strokeWidth={1.75} aria-hidden />
     </a>
   );
 }
@@ -506,7 +515,7 @@ export function DistanceCell({
       >
         {label}
       </PopoverTrigger>
-      <PopoverContent align="end" className="w-[min(92vw,300px)]">
+      <PopoverContent align="center" className="w-[min(92vw,300px)]">
         <p className="text-micro mb-2 uppercase tracking-micro text-label">
           Moradia e unidades
         </p>
@@ -588,7 +597,7 @@ export function QuickNoteCell({
       >
         ✎
       </PopoverTrigger>
-      <PopoverContent align="end" className="w-[min(92vw,340px)]">
+      <PopoverContent align="center" className="w-[min(92vw,340px)]">
         <p className="text-micro mb-1.5 uppercase tracking-micro text-label">
           Nota rápida
         </p>
