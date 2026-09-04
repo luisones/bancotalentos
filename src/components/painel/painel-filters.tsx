@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { MicroHeader } from "@/components/liceu/surface";
 import { shortCampaignName } from "@/lib/campaign-color";
+import { disciplineAbbr } from "@/lib/discipline-abbr";
 import { toneTinted, type Tone } from "@/lib/tone";
 import { cn } from "@/lib/utils";
 import { SearchField } from "./search-field";
@@ -91,8 +92,9 @@ export function PainelFilters({
               key={d.slug}
               href={hrefFor({ discipline: d.slug })}
               active={active.discipline === d.slug}
+              title={d.name}
             >
-              {d.name}
+              {disciplineAbbr(d.slug, d.name)}
             </Pill>
           ))}
         </FilterRow>
@@ -122,17 +124,22 @@ function Pill({
   href,
   active,
   tone,
+  title,
   children,
 }: {
   href: string;
   active: boolean;
   tone?: Tone;
+  /** Nome por extenso quando o rótulo é sigla — vira `title` e `aria-label`. */
+  title?: string;
   children: React.ReactNode;
 }) {
   return (
     <Link
       href={href}
       aria-current={active ? "true" : undefined}
+      title={title}
+      aria-label={title}
       className={cn(
         "text-note rounded-chip border px-2.5 py-[3px] transition-colors",
         active
